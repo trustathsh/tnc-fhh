@@ -1,0 +1,595 @@
+\subsection{Detailed flow of operations}
+In this chapter, the flow of operations inside \texttt{FreeRADIUS} is shown with the help of the debug-output and the corresponding sourcecode.
+In some cases, only the code for the debug-output itself and a general description is given, but with the given sourcecode-file and method name, a more precise analysis of the code is possible.
+
+\subsubsection*{Start of EAP-TTLS}
+\label{section:start_of_eap_ttls}
+\begin{enumerate}
+\item \textbf{Debug-Output:}\\
+\radd{Ready to process requests.}\\
+\newline
+\textbf{Description:}\\
+First output after initialization. FreeRADIUS now runs in its main loop until exit.\\
+\newline
+\textbf{Source-Code:}\\
+\radf{main/event.c}, \radm{event\_status()}:
+\begin{lstlisting}
+DEBUG("Ready to process requests.");
+\end{lstlisting}
+
+\item \textbf{Debug-Output:}\\
+\radd{rad\_recv: Access-Request packet from host 192.168.1.6 port 1024,}\\
+\radd{id=52, length=217}\\
+\newline
+\textbf{Description:}\\
+First package from supplicant is received.\\
+\newline
+\textbf{Source-Code:}\\
+\radf{main/listen.c}, \radm{stats\_socket\_recv()} and \radf{lib/radius.c}, \radm{rad\_recv()}:
+\begin{lstlisting}
+DEBUG("rad_recv: %s packet from host %s port %d", ...)
+DEBUG(", id=%d, length=%d\n", ...)
+\end{lstlisting}
+
+\newpage
+
+\item \textbf{Debug-Output:}\\
+\radd{+- entering group authorize {...}}\\
+\newline
+\textbf{Description:}\\
+At first, the request is processed by all configured authorizing-instances. These are defined in the \radf{authorize}-section in the DEFAULT-virtual server-configuration.\\
+\newline
+\textbf{Source-Code:}\\
+\radf{main/modules.c}, \radm{indexed\_modcall(int, int, REQUEST*)} and \radf{main/modcall.c}, \radm{modcall(int, modcallable*, REQUEST*)}:
+\begin{lstlisting}
+RDEBUG2("%.*s- entering %s %s {...}",
+\end{lstlisting}
+
+\item \textbf{Debug-Output:}\\
+\radd{++[preprocess] returns ok}\\
+\newline
+\textbf{Description:}\\
+The preprocess-module sanitizes the packet. It returns \radd{RLM\_MODULE\_OK}, which means that the next authorization module is called.\\
+\newline
+\textbf{Source-Code:}\\
+\radf{rlm\_preprocess/rlm\_preprocess.c}, \radm{preprocess\_authorize(void*, REQUEST*)}:
+\begin{lstlisting}
+myresult = call_modsingle(child->method, sp, request,
+default_component_results[component]);
+	handle_result:
+		RDEBUG2("%.*s[%s] returns %s",
+\end{lstlisting}
+
+\item \textbf{Debug-Output:}\\
+\radd{[eap] EAP packet type response id 1 length 12}\\
+\radd{[eap] No EAP Start, assuming it's an on-going EAP conversation}\\
+\radd{++[eap] returns updated}\\
+\newline
+\textbf{Description:}\\
+The EAP-module and its authorize-method handles EAP-Start-messages and the extraction of the username out of the EAP-Identity-packet. It returns \radm{RLM\_MODULE\_UPDATED}, as the packet has to be further processed.\\
+\newline
+\textbf{Source-Code:}\\
+\radf{rlm\_eap/rlm\_eap.c}, \radm{eap\_authorize(void*, REQUEST*)}:
+\begin{lstlisting}
+RDEBUG2("EAP packet type %s id %d length %d", ...);
+\end{lstlisting}
+\radf{rlm\_eap/rlm\_eap.c}, \radm{eap\_start()}:
+\begin{lstlisting}
+RDEBUG2("No EAP Start, assuming it's an on-going EAP conversation");
+\end{lstlisting}
+
+\item \textbf{Debug-Output:}\\
+\radd{[files] users: Matched entry tncuser at line 167}\\
+\radd{++[files] returns ok}\\
+\newline
+\textbf{Description:}\\
+The files-module searches the users-file for the current username (\radd{tncuser}).\\
+\newline
+\textbf{Source-Code:}\\
+\radf{rlm\_files/rlm\_files.c}, \radm{file\_authorize(void*, REQUEST*)} and \radf{rlm\-\_files\-/rlm\-\_files.c}, \radm{file\-\_common(...)}:
+\begin{lstlisting}
+RDEBUG2("%s: Matched entry %s at line %d", ...)
+\end{lstlisting}
+\end{enumerate}
+
+\newpage
+
+% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % 
+
+\subsubsection*{Establishing the tunnel for EAP-TTLS}
+\label{section:establishing_the_tunnel_for_eap_ttls}
+\begin{enumerate}
+\item \textbf{Debug-Output:}\\
+\radd{+- entering group authenticate {...}}\\
+\newline
+\textbf{Description:}\\
+The authenticate-section of the policy is used on the packet.\\
+\newline
+\textbf{Source-Code:}\\
+\radf{main/modules.c}, \radm{indexed\_modcall(int, int, REQUEST*)} and \radf{main/modcall.c}, \radm{modcall(int, modcallable*, REQUEST*)}:
+\begin{lstlisting}
+RDEBUG2("%.*s- entering %s %s {...}",
+\end{lstlisting}
+
+\item \textbf{Debug-Output:}\\
+\radd{[eap] EAP Identity}\\\
+\radd{[eap] processing type tls}\\
+\radd{[tls] Initiate}\\
+\radd{[tls] Start returned 1}\\
+\radd{++[eap] returns handled}\\
+\newline
+\textbf{Description:}\\
+As EAP-TTLS is configured as the default type for EAP in FreeRADIUS, it first starts a TLS-authentication to establish the tunnel.\\
+\newline
+\textbf{Source-Code:}\\
+\radf{eap.c}, \radm{eaptype\_select()}:
+\begin{lstlisting}
+switch(eaptype->type) {
+case PW_EAP_IDENTITY:
+RDEBUG2("EAP Identity");
+\end{lstlisting}
+\radf{eap.c}, \radm{eaptype\_call()}:
+\begin{lstlisting}
+RDEBUG2("processing type %s", atype->typename);
+\end{lstlisting}
+\radf{rlm\_eap\_tls.c}, \radm{eaptls\_initiate}:
+\begin{lstlisting}
+RDEBUG2("Initiate");
+RDEBUG2("Start returned %d", status);
+\end{lstlisting}
+
+\newpage
+
+\item \textbf{Debug-Output:}\\
+\radd{Sending Access-Challenge of id 52 to 192.168.1.6 port 1024}\\
+\radd{EAP-Message = 0x010200061520}\\
+\radd{Message-Authenticator = 0x00000000000000000000000000000000}\\
+\radd{State = 0xa0b5f0a6a0b7e5e1ed41351c180f735a}\\
+\radd{Finished request 0.}\\
+\newline
+\textbf{Description:}\\
+The first EAP-TTLS-packet which is send to the supplicant.\\
+\newline
+\textbf{Source-Code:}\\
+\radf{lib/radius.c}, \radm{rad\_send(...)}:
+\begin{lstlisting}
+DEBUG("Sending %s of id %d to %s port %d\n", ...)
+\end{lstlisting}
+\radf{main/event.c}, \radm{request\_post\_handler(...)}:
+\begin{lstlisting}
+RDEBUG2("Finished request %d.", request->number);
+\end{lstlisting}
+\end{enumerate}
+
+\newpage
+
+% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % 
+
+\subsubsection*{Running EAP-MD5 as the first inner method}
+\label{section:running_eap_md5_as_the_first_inner_method}
+\begin{enumerate}
+\item \textbf{Debug-Output:}\\
+\radd{+- entering group authenticate \{...\}}\\
+\radd{[eap] Request found, released from the list}\\
+\radd{[eap] EAP/ttls}\\
+\radd{[eap] processing type ttls}\\
+\radd{[ttls] Authenticate}\\
+\radd{[ttls] processing EAP-TLS}\\
+\radd{[ttls] eaptls\_verify returned 7}\\
+\radd{[ttls] Done initial handshake}\\
+\radd{[ttls] eaptls\_process returned 7}\\
+\radd{[ttls] Session established.  Proceeding to decode tunneled attributes.}\\
+\newline
+\textbf{Description:}\\
+The TLS-tunnel is established. Now the inner method(s) are processed.\\
+\newline
+\textbf{Source-Code:}\\
+\radf{rlm\_eap\_ttls/rlm\_eap\_ttls.c}, \radm{eapttls\_authenticate()}:
+\begin{lstlisting}
+RDEBUG2("Session established.  Proceeding to decode tunneled attributes.");
+\end{lstlisting}
+
+\item \textbf{Debug-Output:}\\
+\radd{[ttls] Setting default EAP type for tunneled EAP session.}\\
+\newline
+\textbf{Description:}\\
+The configured EAP-type for the first inner authentication method is set (which is EAP-MD5 in this case).\\
+\newline
+\textbf{Source-Code:}\\
+\radf{rlm\_eap\_ttls/ttls.c}, \radm{eapttls\_process()}:
+\begin{lstlisting}
+if (!fake->username) {
+	if (!t->username) {
+		if (t->default_eap_type != 0) {
+			RDEBUG("Setting default EAP type for tunneled EAP session.");
+			vp = paircreate(PW_EAP_TYPE, PW_TYPE_INTEGER);
+			rad_assert(vp != NULL);
+			vp->vp_integer = t->default_eap_type;
+			pairadd(&fake->config_items, vp);
+\end{lstlisting}
+
+\newpage
+
+\item \textbf{Debug-Output:}\\
+\radd{[ttls] Sending tunneled request}\\
+\radd{EAP-Message = 0x0200000c01746e6375736572}\\
+\radd{FreeRADIUS-Proxied-To = 127.0.0.1}\\
+\radd{User-Name = "tncuser"}\\
+\newline
+\textbf{Description:}\\
+The packet is proxied to the virtual server configured for EAP-TTLS.\\
+\newline
+\textbf{Source-Code:}\\
+\radf{rlm\_eap\_ttls/ttls.c}, \radm{eapttls\_process()}:
+\begin{lstlisting}
+if ((debug_flag > 0) && fr_log_fp) {
+	RDEBUG("Sending tunneled request");
+	debug_pair_list(fake->packet->vps);
+\end{lstlisting}
+
+\item \textbf{Debug-Output:}\\
+\radd{server inner-tunnel \{}\\
+\newline
+\textbf{Description:}\\
+The virtual server for the inner method (configured in \radf{/usr\-/local\-/etc\-/raddb\-/sites-enabled\-/inner-tunnel}) starts its processing.\\
+\newline
+\textbf{Source-Code:}\\
+\radf{main/even.c}, \radm{radius\_handle\_request(...)}:
+\begin{lstlisting}
+if (request->server) RDEBUG("server %s \{",
+\end{lstlisting}
+
+\item \textbf{Debug-Output:}\\
+\radd{+- entering group authorize \{...\}}\\
+\radd{[eap] EAP packet type response id 0 length 12}\\
+\radd{[eap] No EAP Start, assuming it's an on-going EAP conversation}\\
+\radd{++[eap] returns updated}\\
+\radd{[files] users: Matched entry tncuser at line 167}\\
+\radd{++[files] returns ok}\\
+\radd{Found Auth-Type = EAP}\\
+\newline
+\textbf{Description:}\\
+Same processing as in section \ref{section:start_of_eap_ttls}.
+
+\newpage
+
+\item \textbf{Debug-Output:}\\
+\radd{+- entering group authenticate \{...\}}\\
+\radd{[eap] EAP Identity}\\
+\radd{[eap] processing type md5}\\
+\radd{rlm\_eap\_md5: Issuing Challenge}\\
+\radd{++[eap] returns handled}\\
+\newline
+\textbf{Description:}\\
+EAP-MD5 is started; returns \radm{RLM\_MODULE\_HANDLED}, as the packet has NOT to be further processed.\\
+\newline
+\textbf{Source-Code:}\\
+\radf{eap.c}, \radm{eaptype\_select()}:
+\begin{lstlisting}
+switch(eaptype->type) \{
+case PW_EAP_IDENTITY:
+RDEBUG2("EAP Identity");
+\end{lstlisting}
+\radf{eap.c}, \radm{eaptype\_call()}:
+\begin{lstlisting}
+RDEBUG2("processing type %s", atype->typename);
+switch (handler->stage) {
+	case INITIATE:
+		if (!atype->type->initiate(atype->type_data, handler))
+			rcode = 0;
+		break;
+\end{lstlisting}
+\radf{rlm\_eap\_md5.c}, \radm{md5\_initiate}:
+\begin{lstlisting}
+DEBUG2("rlm_eap_md5: Issuing Challenge");
+\end{lstlisting}
+
+\item \textbf{Debug-Output:}\\
+\radd{\} \# server inner-tunnel}\\
+\newline
+\textbf{Description:}\\
+The virtual server ends its processing, as EAP-MD5 returned the state, that the request is fully processed..\\
+\newline
+\textbf{Source-Code:}\\
+\radf{main/event.c}, \radm{radius\_handle\_request(...)}:
+\begin{lstlisting}
+if (request->server) RDEBUG("} # server %s", ...)
+\end{lstlisting}
+\end{enumerate}
+
+\newpage
+
+% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % 
+
+\subsubsection*{Finishing EAP-MD5 and starting EAP-TNC}
+\label{section:finishing_eap_md5_and_starting_eap_tnc}
+\begin{enumerate}
+\item \textbf{Debug-Output:}\\
+\radd{[ttls] Reply-Code of the first inner method was:}\\
+\radd{2 (PW\_AUTHENTICATION\_ACK)}\\
+\radd{EAP-TNC as second inner authentication method starts now}\\
+\newline
+\textbf{Description:}\\
+The Access-Accept of the first method is intercepted and the second method is started. The value-pairs of the Access-Accept are copied and stored in a field in the tunnel-structure (\radd{ttls\_tunnel\_t)}. Inside the \radm{start\_tnc()}-method, \\
+\newline
+\textbf{Source-Code:}\\
+\radf{rlm\_eap\_ttls/ttls.c}, \radm{eapttls\_process(EAP\_HANDLER*, tls\_session\_t*)}:
+\begin{lstlisting}
+if (t->tnc_virtual_server) {
+	if (fake->reply->code == PW_AUTHENTICATION_ACK
+		&& t->doing_tnc == FALSE) {
+			RDEBUG2("Reply-Code of the first inner method was: %d (PW_AUTHENTICATION_ACK)", fake->reply->code);
+\end{lstlisting}
+\radf{rlm\_eap\_ttls/ttls.c}, \radm{start\_tnc(EAP\_HANDLER*, ttls\_tunnel\_t*)}:
+\begin{lstlisting}
+RDEBUG2("EAP-TNC as second inner authentication method starts now");
+\end{lstlisting}
+
+\item \textbf{Debug-Output:}\\
+\radd{Got tunneled request}\\
+\radd{FreeRADIUS-Proxied-To = 127.0.0.1}\\
+\newline
+\textbf{Description:}\\
+The new request is marked as fake-request.\\
+\newline
+\textbf{Source-Code:}\\
+\radf{rlm\_eap\_ttls/ttls.c}, \radm{start\_tnc(EAP\_HANDLER*, ttls\_tunnel\_t*)}:
+\begin{lstlisting}
+VALUE_PAIR *vp;
+vp = pairmake("Freeradius-Proxied-To", "127.0.0.1", T_OP_EQ);
+if (vp) {
+	pairadd(&fake->packet->vps, vp);
+}
+
+if ((debug_flag > 0) && fr_log_fp) {
+	RDEBUG("Got tunneled request");
+
+	debug_pair_list(fake->packet->vps);
+}
+\end{lstlisting}
+
+\newpage
+
+\item \textbf{Debug-Output:}\\
+No debug-output, only the source-code will be described here.\\
+\newline
+\textbf{Description:}\\
+This code creates a new request out of the original Access-Accept of the first inner method.
+It sets the processing virtual server to the second EAP-module-instance, \radd{eap\_tnc}, so that only EAP-TNC-packets are allowed in the second inner authentication.
+Therefore it creates a new EAP-Start-packet with type EAP-TNC and length = 0.
+This will trigger the EAP-module to recognize a EAP-Start-packet and then send a EAP-Identity-Request to the supplicant.\\
+\newline
+\textbf{Soure-Code:}\\
+\radf{rlm\_eap\_ttls/ttls.c}, \radm{eapttls\_process(EAP\_HANDLER*, tls\_session\_t*)}:
+\begin{lstlisting}
+REQUEST* fake = request_alloc_fake(request);
+
+fake->server = t->tnc_virtual_server;
+
+VALUE_PAIR *eap_msg;
+eap_msg = paircreate(PW_EAP_MESSAGE, PW_TYPE_OCTETS);
+
+eap_msg->vp_octets[0] = PW_EAP_RESPONSE;
+eap_msg->vp_octets[1] = 0x00;
+eap_msg->vp_octets[4] = PW_EAP_TNC;
+eap_msg->length = 0;
+
+pairadd(&(fake->packet->vps), eap_msg);
+\end{lstlisting}
+
+\item \textbf{Debug-Output:}\\
+\radd{+- entering group authorize \{...\}}\\
+\radd{++[preprocess] returns ok}\\
+\newline
+\textbf{Description:}\\
+The authorize-policy is applied to the new fake-request by the virtual server for EAP-TNC.\\
+\newline
+\textbf{Source-Code:}\\
+\radf{ttls.c}, \radm{start\_tnc()}:
+\begin{lstlisting}
+rad_authenticate(fake);
+\end{lstlisting}
+
+\newpage
+
+\item \textbf{Debug-Output:}\\
+\radd{[eap\_tnc] Got EAP\_START message}\\
+\newline
+\textbf{Description:}\\
+The EAP-Start-packet is recognized and changed to an EAP-Identity-packet. It is then send to the supplicat as an Access-Challenge.\\
+\newline
+\textbf{Source-Code:}\\
+\radf{rlm\_eap/eap.c}, \radm{eap\_start()}:
+\begin{lstlisting}
+if ((eap_msg->length == 0) || (eap_msg->length == 2)) {
+	RDEBUG2("Got EAP_START message");
+\end{lstlisting}
+
+\item \textbf{Debug-Output:}\\
+\radd{++[eap\_tnc] returns handled}\\
+\newline
+\textbf{Description:}\\
+Returns \radm{RLM\_MODULE\_HANDLED}, as the packet has NOT to be further processed.\\
+\newline
+\textbf{Source-Code:}\\
+\radf{main/modcall.c}, \radm{int modcall(int component, modcallable *c, REQUEST *request)}:
+\begin{lstlisting}
+handle_result:
+	RDEBUG2("%.*s[%s] returns %s",
+		stack.pointer + 1, modcall_spaces,
+		child->name ? child->name : "",
+		fr_int2str(rcode_table, myresult, "??"));
+\end{lstlisting}
+
+\item \textbf{Debug-Output:}\\
+\radd{[ttls] Got tunneled Access-Challenge}\\
+\newline
+\textbf{Description:}\\
+The EAP-Identity-Request is send to the client.\\
+\newline
+\textbf{Source-Code:}\\
+\radf{ttls.c}, \radm{process\_reply()}:
+\begin{lstlisting}
+switch (reply->code) {
+	case PW_ACCESS_CHALLENGE:
+		RDEBUG("Got tunneled Access-Challenge");
+		rcode = RLM_MODULE_HANDLED;
+\end{lstlisting}
+\end{enumerate}
+
+\newpage
+
+% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % 
+
+\subsubsection*{Ongoing EAP-TNC authentication}
+\label{section:ongoing_eap_tnc_authentication}
+\begin{enumerate}
+\item \textbf{Debug-Output:}\\
+\radd{server inner-tunnel-second \{}\\
+\radd{+- entering group authorize \{...\}}\\
+\radd{++[preprocess] returns ok}\\
+\radd{[eap\_tnc] EAP packet type response id 1 length 12}\\
+\radd{[eap\_tnc] No EAP Start, assuming it's an on-going EAP conversation}\\
+\radd{++[eap\_tnc] returns updated}\\
+\radd{Found Auth-Type = eap\_tnc}\\
+\radd{+- entering group authenticate \{...\}}\\
+\radd{[eap\_tnc] EAP Identity}\\
+\radd{[eap\_tnc] processing type tnc}\\
+\radd{tnc\_initiate: 1268134592}\\
+\newline
+\textbf{Description:}\\
+The virtual server for the second inner method is used $\rightarrow$ \radm{inner-tunnel-second}. That one uses the second instance of the EAP-module (\radm{eap\_tnc}) to process the incoming request. At the end, the EAP-TNC-module is called the first time.\\
+\newline
+\textbf{Source-Code:}\\
+\radf{rlm\_eap\_tnc.c}, \radm{tnc\_initiate()}:
+\begin{lstlisting}
+DEBUG("tnc_initiate: %ld", handler->timestamp);
+\end{lstlisting}
+
+\item \textbf{Debug-Output:}\\
+\radd{++[eap\_tnc] returns handled}\\
+\radd{\} \# server inner-tunnel-second}\\
+\radd{[ttls] Got tunneled reply code 11}\\
+\newline
+\textbf{Description:}\\
+The virtual server for the second inner method has finished the processing of the request. Afterwards, the reply is processed by the EAP-TTLS-module.\\
+\newline
+\textbf{Source-Code:}\\
+\radf{ttls.c}, \radm{eapttls\_process()}:
+\begin{lstlisting}
+if ((debug_flag > 0) && fr_log_fp) {
+	fprintf(fr_log_fp, "} # server %s\n",
+		(fake->server == NULL) ? "" : fake->server);
+	RDEBUG("Got tunneled reply code %d", fake->reply->code);
+
+	debug_pair_list(fake->reply->vps);
+}
+\end{lstlisting}
+\end{enumerate}
+
+\newpage
+
+% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % 
+
+\subsubsection*{Finishing EAP-TNC and sending the Access-Accept packet}
+\label{section:finishing_eap_tnc_and_sending_the_access_accept_packet}
+\begin{enumerate}
+\item \textbf{Debug-Output:}\\
+\radd{++[eap\_tnc] returns ok}\\
+\newline
+\textbf{Description:}\\
+Returns \radm{RLM\_MODULE\_OK}, as the packet has to be further processed by the post-authenticate-section.\\
+\newline
+\textbf{Source-Code:}\\
+\radf{main/modcall.c}, \radm{int modcall(int component, modcallable *c, REQUEST *request)}:
+\begin{lstlisting}
+handle_result:
+	RDEBUG2("%.*s[%s] returns %s",
+		stack.pointer + 1, modcall_spaces,
+		child->name ? child->name : "",
+		fr_int2str(rcode_table, myresult, "??"));
+\end{lstlisting}
+
+\item \textbf{Debug-Output:}\\
+\radd{+- entering group post-auth \{...\}}\\
+\radd{++? if (control:TNC-Status == "Access")}\\
+\radd{? Evaluating (control:TNC-Status == "Access") -> TRUE}\\
+\radd{++? if (control:TNC-Status == "Access") -> TRUE}\\
+\radd{++- entering if (control:TNC-Status == "Access") \{...\}}\\
+\radd{+++[reply] returns noop}\\
+\radd{++- if (control:TNC-Status == "Access") returns noop}\\
+\radd{++ ... skipping elsif for request 10: Preceding "if" was taken}\\
+\radd{\} \# server inner-tunnel-second}\\
+\newline
+\textbf{Description:}\\
+The post-authenticate subsection of the virtual-server for EAP-TNC; as the attribute \radm{TNC-Status} is set to either \radm{access} or \radm{isolate} by the EAP-TNC-module, it sets the VLAN-settings in the Access-Accept.\\
+\newline
+\textbf{Source-Code:}\\
+\radf{main/modcall.c}, \radm{modcall(...)}:
+\begin{lstlisting}
+if (radius_evaluate_condition(request, myresult, 0, &p, TRUE, &condition)) {
+	RDEBUG2("%.*s? %s %s -> %s",
+		stack.pointer + 1, modcall_spaces,
+		child->type == MOD_IF ? "if" : "elsif",
+		child->name, (condition != FALSE) ? "TRUE" : "FALSE");
+\end{lstlisting}
+
+\item \textbf{Debug-Output:}\\
+\radd{[ttls] Reply-Code of EAP-TNC as the second inner method was:}\\
+\radd{2 (PW\_AUTHENTICATION\_ACK)}\\
+\radd{EAP-TNC as second inner authentication method stops now}\\
+\newline
+\textbf{Description:}\\
+The result of the second authentication is success, so both inner authentications were successfull.\\
+\newline
+\textbf{Source-Code:}\\
+\radf{rlm\_eap\_ttls/ttls.c}, \radm{eapttls\_process(EAP\_HANDLER*, tls\_session\_t*}:
+\begin{lstlisting}
+} else if (t->doing_tnc == TRUE
+	&& (fake->reply->code == PW_AUTHENTICATION_ACK || fake->reply->code == PW_AUTHENTICATION_REJECT)) {
+		RDEBUG2("Reply-Code of EAP-TNC as the second inner method was: %d (%s)", fake->reply->code,
+			fake->reply->code == PW_AUTHENTICATION_ACK ? "PW_AUTHENTICATION_ACK" : "PW_AUTHENTICATION_REJECT");
+\end{lstlisting}
+\radf{rlm\_eap\_ttls/ttls.c}, \radm{stop\_tnc(...)}:
+\begin{lstlisting}
+RDEBUG2("EAP-TNC as second inner authentication method stops now");
+\end{lstlisting}
+
+\item \textbf{Debug-Output:}\\
+\radd{[ttls] Got tunneled Access-Accept}\\
+\radd{++[eap] returns ok}\\
+\newline
+\textbf{Description:}\\
+The EAP-TTLS-module gets the fake-request back and processes the reply-content.
+Afterwards the EAP-module is finished, as the request was successful.\\
+\newline
+\textbf{Source-Code:}\\
+\radf{ttls.c}, \radm{process\_reply()}:
+\begin{lstlisting}
+switch (reply->code) {
+	case PW_AUTHENTICATION_ACK:
+		RDEBUG("Got tunneled Access-Accept");
+		rcode = RLM_MODULE_OK;
+\end{lstlisting}
+
+\newpage
+
+\item \textbf{Debug-Output:}\\
+\radd{Sending Access-Accept of id 62 to 192.168.1.6 port 1024}\\
+\radd{Message-Authenticator = 0x00000000000000000000000000000000}\\
+\radd{User-Name = "tncuser"}\\
+\radd{Tunnel-Type:0 = VLAN}\\
+\radd{Tunnel-Medium-Type:0 = IEEE-802}\\
+\radd{Tunnel-Private-Group-Id:0 = "96"}\\
+\radd{EAP-Message = 0x030b0004}\\
+\newline
+\textbf{Description:}\\
+The Access-Accept is send to the PEP, with the configured VLAN-settings.\\
+\newline
+\textbf{Source-Code:}\\
+\radf{lib/radius.c}, \radm{rad\_send(...)}:
+\begin{lstlisting}
+DEBUG("Sending %s of id %d to %s port %d\n", ...)
+\end{lstlisting}
+\end{enumerate}
+

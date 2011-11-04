@@ -1,0 +1,68 @@
+--- libtnc-1.23.bak/src/libtnc/base64.c	2009-03-18 12:28:34.000000000 +0100
++++ libtnc-1.23/src/libtnc/base64.c	2010-03-19 08:28:49.107766475 +0100
+@@ -43,6 +43,42 @@
+ // Always NUL terminates the result
+ // Returns the length of the result (not counting the NUL termination)
+ // *result must be freed
++// FHH
++// base64 padding: add number of NULL-bytes to input, so that
++// resulting number of input bytes % 3 = 0. For each NULL-byte added to the
++// input, the base64 encoded data has a '=' at the end.
++// i.e., there are 0, 1 or 2 NULL-bytes present.
++// case 0 NULL-bytes
++//       7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0
++//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
++//      |               |               |               |
++//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
++//      c1              c2              c3
++//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
++//      |     b3    |     b2    |     b1    |     b0    |
++//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
++//      i.e. use c1, c2, c3 to get input data
++// case 1 NULL-bytes, '='
++//       7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0
++//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
++//      |               |               |0 0 0 0 0 0 0 0|
++//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
++//      c1              c2              c3
++//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
++//      |     b3    |     b2    |     b1    |     b0    |
++//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
++//      i.e. use c1, c2 to get input data
++// case 2 NULL-bytes. '=='
++//       7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0
++//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
++//      |               |0 0 0 0 0 0 0 0|0 0 0 0 0 0 0 0|
++//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
++//      c1              c2              c3
++//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
++//      |     b3    |     b2    |     b1    |     b0    |
++//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
++//     i.e. use only c1 to get input data 
++//
+ size_t
+ encode_base64(
+     /*in*/  unsigned char* str, 
+@@ -67,6 +103,7 @@
+     // encode 
+     for (chunk=0; len > 0; len = (len < 3) ? 0 : (len - 3), chunk++) 
+     {
++	printf("°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°° chunk: %d, len: %d\n", chunk, len);
+ 	if (chunk == (MAX_LINE/4)) 
+ 	{
+ 	    char *c = eol;
+@@ -78,7 +115,13 @@
+ 	c1 = *str++;
+ 	c2 = *str++;
+ 	r[rindex++] = basis_64[c1>>2];
+-	r[rindex++] = basis_64[((c1 & 0x3)<< 4) | ((c2 & 0xF0) >> 4)];
++	// FHH patch
++	if(len == 1){
++		r[rindex++] = basis_64[((c1 & 0x3)<< 4)];
++	} else {
++		r[rindex++] = basis_64[((c1 & 0x3)<< 4) | ((c2 & 0xF0) >> 4)]; // does not work if len==1, c2 is not valid
++	}
++
+ 	if (len > 2) 
+ 	{
+ 	    c3 = *str++;

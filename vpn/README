@@ -1,0 +1,91 @@
+Installation Hints / Configuration parts
+
+Every executeable expects a path to the configuration file.
+
+libtncvpn:
+Every component, vpnclient, naavpn and vpnpep need the libtncvpn library
+installed on the system.
+
+
+vpnclient:
+	The configuration file /etc/tnc/ifttls/client/client.conf is
+	installed on the system.
+	This file contains the hostname and port of the ifttls-host machine.
+	Further, the path to the file which is used to verify the
+	servers certificate needs to be given.
+
+	---
+	PDP_PORT=12345
+	PDP_ADDR=127.0.0.1
+	VERIFY_FILE=/etc/tnc/ifttls/pdp/ca.pem
+	---
+
+	The executeable vpnclient is installed into /usr/local/bin and
+	can be used to start the client. 
+	TODO: Rename executeable to ar?
+
+	On top of the ifttls layer, libTNC is used. Configuration of the
+	IMCs to be used needs to be made in the standard /etc/tnc_config
+	file.
+
+naavpn:
+	This component represents the PDP. The following content is in
+	file /etc/tnc/ifttls/pdp/pdp.conf:
+
+	---
+	CONFIGURATION_SERVICE_FILE=/etc/tnc/ifttls/pdp/tnc_vpn.conf
+	PDP_PORT=12345
+	PEP_PORT=12346
+	PEP_KEY=/etc/tnc/ifttls/pdp/ca.pem
+	DH_FILE=/etc/tnc/ifttls/pdp/dh512.pem
+	SERVER_KEY=/etc/tnc/ifttls/pdp/server.pem
+	SERVER_KEY_PASSWORD=test
+	---
+
+	PEP_KEY is the file used for verifying the PEP the PDP connects
+	to. SERVER_KEY is the key to be used by the PDP and
+	SERVER_KEY_PASSWORD the respective password.
+
+	TODO: Not sure if this configuration really works if one uses
+		certificates other than thouse example certs.
+
+	The CONFIGURATION_SERVICE_FILE specifies the file where the
+	mapping of client IP adresses to the responsible PEP is provided.
+	
+	The content of the tnc_vpn.conf file, for instance is:
+	
+	---
+	192.168.1.18=10.8.0.0/24
+	127.0.0.1=127.0.0.0/8
+	---
+
+	PEP at address 127.0.0.1 is responsible for the 127.0.0.0/8
+	subnetwork.
+
+	The PDP uses the tncs@fhh implementation. IMVs can be configured
+	through /etc/tnc_config.
+	The executeable /usr/local/bin/pdp can be used to start the
+	server. It accepts connections from ARs on the port given in
+	the config file. After a successful TNC handshake with outcome
+	ALLOW, the PDP connects to the responsible PEP and transmits
+	the command to allow traffic from the respective AR.
+
+vpnpep:
+
+	Represents the PEP component. It waits on connections from a PDP
+	and executes scripts to enforce the decision from the PDP.
+	
+	---
+	DH_FILE=/etc/tnc/ifttls/pep/dh512.pem
+	SERVER_KEY=/etc/tnc/ifttls/pep/server.pem
+	SERVER_KEY_PASSWORD=test
+	ALLOW_SCRIPT=/etc/tnc/ifttls/pep/allow-client.sh
+	DENY_SCRIPT=/etc/tnc/ifttls/pep/deny-client.sh
+	SHELL=/bin/sh
+	---
+
+	SERVER_KEY is the key used for the socket, the PEP listens on.
+	ALLOW_SCRIPT and DENY_SCRIPT are executed depending on the command
+	given by the PDP.
+	The provided files contain iptables commands to deny or allow
+	an AR.

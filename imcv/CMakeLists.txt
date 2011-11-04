@@ -1,0 +1,12 @@
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../imunit/src)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../tncxacml/src)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../tncutil/src/)
+add_subdirectory(dummy)
+add_subdirectory(hostscanner)
+add_subdirectory(clamav)
+add_subdirectory(example)
+add_subdirectory(platid)
+
+IF(TPM)
+add_subdirectory(attestation)
+ENDIF(TPM)

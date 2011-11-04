@@ -1,0 +1,14 @@
+TARGET      = @targetname@
+SRCS        = rlm_eap_tnc.c eap_tnc.c 
+HEADERS     = eap_tnc.h
+RLM_CFLAGS  = $(INCLTDL) -I../.. -I../../libeap $(CPPFLAGS)
+RLM_LIBS    = -lnaaeap
+RLM_INSTALL = 
+
+RLM_DIR=../../
+include ${RLM_DIR}../rules.mak
+
+$(STATIC_OBJS): $(HEADERS)
+
+$(DYNAMIC_OBJS): $(HEADERS)
+

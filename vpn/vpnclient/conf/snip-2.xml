@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<TNCCS-Batch xmlns="http://www.trustedcomputinggroup.org/IWG/TNC/1_0/IF_TNCCS#" BatchId="2" Recipient="TNCC" xmlns:xsi="http://www.trustedcomputinggroup.org/IWG/TNC/1_0/IF_TNCCS# https://www.trustedcomputinggroup.org/XML/SCHEMA/TNCCS_1.0.xsd">
+
+  <IMC-IMV-Message>
+    <Type>499602D2</Type>
+    <Base64>SU1DSG9zdFNjYW5uZXIgYWN0aXZlAA==
+</Base64>
+  </IMC-IMV-Message>
+
+  <IMC-IMV-Message>
+    <Type>0080ab30</Type>
+    <Base64>VENQIDIwClRDUCAyMQpUQ1AgMjIKVENQIDIzClRDUCAyNQpUQ1AgNTg3ClRD
+UCAxMTAKVENQIDk5NQpVRFAgNTMKVENQIDUzClVEUCA2NwpVRFAgNjgKVENQ
+IDgwClRDUCA0NDMKVENQIDgwODAKVENQIDUyMjMKVURQIDQ0NDQKVURQIDYz
+MQo=
+</Base64>
+  </IMC-IMV-Message>
+
+</TNCCS-Batch>

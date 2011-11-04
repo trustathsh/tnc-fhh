@@ -1,0 +1,4 @@
+// imv configuration
+#define IMV_CONFIG_FILE "@IMV_CONFIG_FILE@"
+#define IMV_CONFIG_DIR "@IMV_CONFIG_DIR@"
+#define IMV_CONFIG "@IMV_CONFIG@"

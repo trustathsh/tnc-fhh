@@ -1,0 +1,15 @@
+# This is the ClamavIMV policy file.
+# Specify the desired, known good values below.
+# Currently, the following attributes are supported:
+# - OperationalStatus: unknown | not_installed | installed_not_operational
+#                      operational
+# - Version: a dotted decimal with three fields
+# - main.cvd: a decimal indicating the version of main.cvd
+# - daily.cvd: a decimal indicating the version of daily.cvd
+# Supported operators are = >= <= > <. For OperationalStatus, only the =
+# operator is supported.
+
+           OperationalStatus          =          operational          
+Version >= 0.95.3
+main >= 51
+daily >= 10262

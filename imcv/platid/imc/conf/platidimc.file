@@ -1,0 +1,12 @@
+# Whether or not use the TCG well known secret for the storage root key
+#
+# If this is set to yes a modified version of the openssl_tpm_engine is
+# needed!
+use_wks_srk yes
+
+# Path to the private key to be used, if the IMC is able to initialize
+# the openssl_tpm_engine this is assumed to be tpm generated RSA key
+private_key_file /etc/tnc/platidimc.test.key
+
+#  Path to the X509 certificate which is send to the IMV.
+x509_certificate_file /etc/tnc/platidimc.test.cert

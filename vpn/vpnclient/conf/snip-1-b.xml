@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<TNCCS-Batch BatchId="1" Recipient="TNCS" xmlns="http://www.trustedcomputinggroup.org/IWG/TNC/1_0/IF_TNCCS#" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.trustedcomputinggroup.org/IWG/TONC/1_0/IF_TNCCS# https://www.trustedcomputinggroup.org/XML/SCHEMA/TNCCS_1.0.xsd">
+<IMC-IMV-Message><Type>FFFF0030</Type><Base64>SU1DSG9zdFNjYW5uZXIgYWN0aXZl
+</Base64></IMC-IMV-Message>
+</TNCCS-Batch>
+

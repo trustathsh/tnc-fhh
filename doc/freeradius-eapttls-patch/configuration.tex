@@ -1,0 +1,179 @@
+\subsection{Configuration}
+This chapter describes the configuration of FreeRADIUS and wpa\_supplicant for the use of multiple inner authentication methods.
+
+\subsubsection*{FreeRADIUS}
+\paragraph{/usr/local/etc/raddb/users}
+The users-file has to contain an entry for a user with a password, so that a user-authentication can take place (EAP-MD5 for example).
+\begin{lstlisting}[style=eapttls-config]
+# User-entry for EAP-MD5
+tncuser Cleartext-Password := password
+\end{lstlisting}
+
+\paragraph{/usr/local/etc/raddb/eap.conf}
+In the configuration of the EAP-module, several things are important.
+The default EAP-type has to be TTLS, and there MUST NOT be a configured instance of EAP-TNC.
+This allows a seperation of the incoming requests, as EAP-TNC-packets are only allowed as the second inner method,
+and are NOT allowed as the first inner method.
+Another important setting is the configuration of the virtual-servers for the EAP-TTLS-module.
+At the end, a second instance of the EAP-module has to be configured, with EAP-TNC as the default EAP-type and a configured EAP-TNC-module.
+\begin{lstlisting}[style=eapttls-config]
+eap {
+  # ...
+  default_eap_type = ttls
+  # ...
+
+  # Comment out the section for TNC
+  # tnc {
+  # }
+
+  # ...
+
+  ttls {
+    default_eap_type = md5
+    # ...
+    use_tunneled_reply = yes
+    #
+    virtual_server = "inner-tunnel"
+    tnc_virtual_server = "inner-tunnel-second"
+  }
+
+  # ...
+}
+
+eap eap_tnc {
+  default_eap_type = tnc
+
+  tnc {
+  }
+
+}
+\end{lstlisting}
+
+\paragraph{/usr/local/etc/raddb/sites-enabled/inner-tunnel}
+The configuration of the inner tunnel has to be the same as the default-one delivered with FreeRADIUS.
+
+\paragraph{/usr/local/etc/raddb/sites-enabled/inner-tunnel-second}
+This virtual server handles the EAP-TNC-packets of the second inner authentication method.
+Important is the usage of the second EAP-module instance (eap\_tnc) in the \textit{authorize} and \textit{authenticate}-section.
+In the \textit{post-auth}-section the content is the same as in the default configuration for EAP-TNC, when used as the only inner authenticaton method.
+
+\begin{lstlisting}[style=eapttls-config]
+# -*- text -*-
+######################################################################
+#
+#	This is a virtual server that handles *only* EAP-TNC
+#	requests.
+#
+#	$Id$
+#
+######################################################################
+
+server inner-tunnel-second {
+
+  #  Authorization. First preprocess (hints and huntgroups files),
+  #  then realms, and finally look in the "users" file.
+  #
+  #  The order of the realm modules will determine the order that
+  #  we try to find a matching realm.
+  #
+  #  Make *sure* that 'preprocess' comes before any realm if you
+  #  need to setup hints for the remote radius server
+  authorize {
+  #
+  #  The preprocess module takes care of sanitizing some bizarre
+  #  attributes in the request, and turning them into attributes
+  #  which are more standard.
+  #
+  #  It takes care of processing the 'raddb/hints' and the
+  #  'raddb/huntgroups' files.
+  #
+  #  It also adds the {Client-IP-Address} attribute to the request.
+  preprocess
+
+  eap_tnc {
+    ok = return
+  }
+}
+
+#  Authentication.
+#
+#
+#  This section lists which modules are available for authentication.
+#  Note that it does NOT mean 'try each module in order'.  It means
+#  that a module from the 'authorize' section adds a configuration
+#  attribute 'Auth-Type := FOO'.  That authentication type is then
+#  used to pick the apropriate module from the list below.
+# 
+
+#  In general, you SHOULD NOT set the Auth-Type attribute.  The server
+#  will figure it out on its own, and will do the right thing.  The
+#  most common side effect of erroneously setting the Auth-Type
+#  attribute is that one authentication method will work, but the
+#  others will not.
+#
+#  The common reasons to set the Auth-Type attribute by hand
+#  is to either forcibly reject the user, or forcibly accept him.
+#
+authenticate {
+  #
+  #  Allow EAP-TNC authentication.
+    eap_tnc
+}
+
+#  Session database, used for checking Simultaneous-Use. Either the radutmp 
+#  or rlm_sql module can handle this.
+#  The rlm_sql module is *much* faster
+session { 
+  radutmp
+}
+
+#  Post-Authentication
+#  Once we KNOW that the user has been authenticated, there are
+#  additional steps we can take.
+post-auth {
+  if (control:TNC-Status == "Access") {
+    update reply {
+      Tunnel-Type := VLAN
+      Tunnel-Medium-Type := IEEE-802
+      Tunnel-Private-Group-ID := 96
+    }
+  }
+  elsif (control:TNC-Status == "Isolate") {
+    update reply {
+      Tunnel-Type := VLAN
+      Tunnel-Medium-Type := IEEE-802
+      Tunnel-Private-Group-ID := 97
+    }
+  }
+
+# Note that we do NOT assign IP addresses here.
+# If you try to assign IP addresses for EAP authentication types,
+# it WILL NOT WORK.  You MUST use DHCP.
+#
+#  Access-Reject packets are sent through the REJECT sub-section of the
+#  post-auth section.
+#
+#  Add the ldap module name (or instance) if you have set 
+#  'edir_account_policy_check = yes' in the ldap module configuration
+#
+  Post-Auth-Type REJECT {
+    attr_filter.access_reject 
+  }
+}
+
+} # inner-tunnel-second block
+\end{lstlisting}
+
+\subsubsection*{wpa\_supplicant.conf}
+The identity and password have to be the same as in the users-configuration on FreeRADIUS.
+\begin{lstlisting}[style=eapttls-config]
+network={
+  ssid="eap_ttls"
+  key_mgmt=IEEE8021X
+  eap=TTLS
+  identity="tncuser"
+  password="password"
+  ca_cert="/home/tncuser/tnc/certs/ca.pem"
+  id_str=""
+}
+\end{lstlisting}

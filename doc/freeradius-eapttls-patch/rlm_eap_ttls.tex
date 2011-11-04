@@ -1,0 +1,92 @@
+\subsection{RLM\_EAP\_TTLS}
+This section describes the implementation and the changes and additions to the original EAP-TTLS-module source code.
+
+
+\subsubsection{File \texttt{eap\_ttls.h}}
+\paragraph{struct ttls\_tunnel\_t}
+This header-file defines the data-structure of an TTLS-tunnel.
+The description of each item was copied from the comments in the file, if available.
+
+\subparagraph{Original attributes}
+\begin{description}
+	\item[VALUE\_PAIR* username] The username (extracted from the EAP-Identity).
+	\item[VALUE\_PAIR* state] The state of the authentication.
+	\item[VALUE\_PAIR* reply] Storage for the tunneled reply.
+	\item[int authenticated] Used for MS-CHAP2-Successes.
+	\item[int default\_eap\_type] Type-ID of the default tunneled EAP-type.
+	\item[int copy\_request\_to\_tunnel] Use SOME of the request attributes from outside of the tunneled session in the tunneled request.
+	\item[int use\_tunneled\_reply] Use the reply attributes from the tunneled session in the non-tunneled reply to the client.
+	\item[const char* virtual\_server] Virtual server for inner tunnel session.
+\end{description}
+
+\subparagraph{Added attributes}
+\begin{description}
+	\item[const char* tnc\_virtual\_server] The virtual server for EAP-TNC as the second inner method.
+	\item[VALUE\_PAIR* auth\_reply] A cache storage of the last reply of the \textbf{first} inner method.
+	\item[int auth\_code] A cache storage for the reply-code of the \textbf{first} inner method.
+	\item[int doing\_tnc] The status, if currently doing EAP-TNC.
+\end{description}
+
+\subsubsection{File \texttt{rlm\_eap\_ttls.c}}
+\paragraph{struct rlm\_eap\_ttls\_t}
+This file defines the configuration-items of the EAP-TTLS-module, and how they are parsed and initialized.
+The configuration-file is \radf{/usr/local/etc/raddb/eap.conf} as default.
+
+\subparagraph{Original configuration-items}
+\begin{description}
+	\item[char* default\_eap\_type\_name] Default tunneled EAP type (by its name).
+	\item[int default\_eap\_type] Type-ID of the default tunneled EAP type.
+	\item[int use\_tunneled\_reply] Use the reply attributes from the tunneled session in the non-tunneled reply to the client.
+	\item[int copy\_request\_to\_tunnel] Use SOME of the request attributes from outside of the tunneled session in the tunneled request.
+	\item[char* virtual\_server] Virtual server for inner tunnel session.
+\end{description}
+
+\subparagraph{Added configuration-items}
+\begin{description}
+	\item[char* tnc\_virtual\_server] Virtual server for the second inner tunnel method, which is EAP-TNC.
+\end{description}
+	
+\subparagraph{static int eapttls\_authenticate(void* arg, EAP\_HANDLER* handler)}
+The file \radf{rlm\-\_eap\-\_ttls.c} also implements the main-authentication-method for EAP-TTLS,
+which handles the establishment of the EAP-TLS-tunnel and then forwards the request to the method that handles the inner authentication method(s), which will be described in the next section.
+
+\subsubsection{File \texttt{ttls.c}}
+This file implements the processing of the inner authentication method(s), which means the methods inside the TLS-tunnel.
+
+\paragraph{int eapttls\_process(EAP\_HANDLER* handler, tls\_session\_t* tls\_session)}
+\subparagraph{Original behaviour}
+This method processes the tunneled method.
+Therefore it creates a fake-packet and tries to look up a username.
+First it looks in the incoming request, then in the tunnel-data, and at last in the EAP-message if it's an EAP-Identity.
+After that it copies some of the request attributes from outside the tunnel to inside the tunnel (if configured to do so).
+Then it sets the virtual server, which has to process the tunneled authentication (if configured, else it is the DEFAULT virtual server).
+The next step is the concrete authentication, which is done by calling the authenticate-method of FreeRADIUS with the fake-packet.
+Afterwards, the reply is used to determine the result-code of the method.
+
+\subparagraph{Added behaviour}
+The method was changed in two places to allow two inner methods in sequence.
+It now checks if EAP-TNC as a second inner authentication method is running, and then sets the virtual server to the configured server for EAP-TNC.
+This causes the authentication of the request to use the virtual server \radm{inner-tunnel-second}, which is configured to only allow EAP-TNC-packets.
+\par
+The second change is before the reply is used to determine the result-code of the method.
+First, it is checked if an virtual server for EAP-TNC is configured.
+Otherwise, only the first inner method is done.
+\par
+Then, it is checked if the result of the last request was an PW\-\_AUTHENTICATION\-\_ACK and if TNC as a second inner method is not running.
+If so, the value pairs and the code of that request is cached, and afterwards the method \radm{start\_tnc} is called.
+\par
+Then it is checked, if TNC as a second method is running and the result of the last request was either PW\-\_AUTHENTICATION\-\_ACK or PW\-\_AUTHENTICATION\-\_REJECT.
+If so, the method \radm{stop\_tnc} is called.
+
+\subparagraph{static REQUEST* start\_tnc(EAP\_HANDLER* handler, ttls\_tunnel\_t* t)}
+Starts EAP-TNC as a second inner method.
+Creates a new fake-request out of the original incoming request (via EAP\_HANDLER).
+Then it creates a new EAP-START-packet with the code = PW\-\_EAP\-\_REQUEST and the type of EAP-TNC.
+This message is then processed by \radm{rad\_authenticate}, which then calls the the EAP-module.
+It recognizes the EAP-START-packet and sets the type of the request to EAP-Identity.
+At the end, an Access-Challenge is send to the supplicant, which is an EAP-Identity-Request.
+
+\subparagraph{static REQUEST* stop\_tnc(EAP\_HANDLER* handler, ttls\_tunnel\_t* t)}
+Stops EAP-TNC as a second inner method.
+It copies the value pairs from the cached Access-Accept of the first inner method to the Access-Accept/Reject package of EAP-TNC.
+

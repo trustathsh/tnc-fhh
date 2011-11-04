@@ -1,0 +1,4 @@
+// imc configuration
+#define IMC_CONFIG_FILE "@IMC_CONFIG_FILE@"
+#define IMC_CONFIG_DIR "@IMC_CONFIG_DIR@"
+#define IMC_CONFIG "@IMC_CONFIG@"

@@ -1,0 +1,18 @@
+# This file is structured like the default tnc_config files
+# located on ARs and PDPs. The main difference is that you
+# can specify both IMCs and IMVs in this file. tncsim
+# will load each of the IMCs and IMVs with the respecticve
+# TNCC or TNCS.
+
+#IMV "exampleimv" /usr/local/lib/libexampleimv.so
+#IMV "dummyimv" /usr/local/lib/libdummyimv.so
+#IMV "hostscannerimv" /usr/local/lib/libhostscannerimv.so
+IMV "platidimv" /usr/local/lib/libplatidimv.so
+#IMV "clamavimv" /usr/local/lib/libclamavimv.so
+
+#IMC "exampleimc" /usr/local/lib/libexampleimc.so
+#IMC "dummyimc" /usr/local/lib/libdummyimc.so
+#IMC "hostscannerimc" /usr/local/lib/libhostscannerimc.so
+IMC "platidimc" /usr/local/lib/libplatidimc.so
+#IMC "clamavimc" /usr/local/lib/libclamavimc.so
+

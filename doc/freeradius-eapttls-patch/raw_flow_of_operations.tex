@@ -1,0 +1,21 @@
+\subsection{Raw flow of operations}
+This chapter will describe the flow of operations during an ongoing EAP-TTLS authentication with two inner methods in general.
+
+\begin{enumerate}
+\item The supplicant connects to the network and runs \texttt{wpa\_supplicant}.
+\item Regarding to its configuration, \texttt{FreeRADIUS} runs EAP-TTLS as it is the default EAP type.
+Therefore it calls the appropriate authenticate-method of the EAP-TTLS-module.
+\item The module itself first starts a EAP-TLS-session to establish the tunnel.
+\item When the TLS-handshake is done, the tunnel is ready for the inner methods to take place.
+\item The first inner method is started, by sending an EAP-Request with the configured default EAP-type of the EAP-TTLS-module to the supplicant.
+\item The first inner method is processed until it is finished.
+\item If the first method was successful, the Access-Accept, which would be send to the supplicant, is intercepted and cached.
+Otherwise, the second method won't start, as a successful user authentication is mandatory.
+\item Then, a new EAP-TNC-authentication inside the TLS-tunnel is started, by sending a fake-EAP-Start-packet to the virtual server that handles EAP-TNC.
+The corresponding EAP-message is build manually and is created as an EAP-Response with the type EAP-TNC and the data-length of zero.
+This triggers the EAP-module to change that to an EAP-Identity-packet, which then starts EAP-TNC.
+\item The EAP-TNC handshake then takes place until it is finished.
+\item When the EAP-TNC-authentication is finished, the value-pairs of the cached Access-Accept of the first inner method are copied to the current request.
+\item The modified Access-Accept or respectively Access-Reject is then send to the PEP.
+\item The supplicant is now authenticated both as by its user and by its platform.
+\end{enumerate}

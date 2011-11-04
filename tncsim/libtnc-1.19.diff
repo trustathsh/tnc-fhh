@@ -1,0 +1,51 @@
+# diff was created by Mike Steinmetz (mbs) 2009-03-30
+diff -u -r libtnc-1.19.orig/src/libtnc/libtnctncc.c libtnc-1.19/src/libtnc/libtnctncc.c
+--- libtnc-1.19.orig/src/libtnc/libtnctncc.c	2008-05-08 05:54:29.000000000 +0200
++++ libtnc-1.19/src/libtnc/libtnctncc.c	2009-03-30 12:51:08.000000000 +0200
+@@ -495,7 +495,7 @@
+ 		{
+ 		    xmlChar* content = xmlNodeGetContent(mcur);
+ 
+-		    type = strtol((const char*)content, NULL, 16);
++		    type = strtoul((const char*)content, NULL, 16); //mbs: BUG here was fixed !!!
+ 		    xmlFree(content);
+ 		}
+ 		else if (!xmlStrcmp(mcur->name, (const xmlChar *) "Base64") 
+@@ -525,6 +525,13 @@
+     }
+     xmlFreeDoc(doc);
+ 
++    // mbs: BUG was fixed !!!
++    //      BatchEnding call was missing.
++    //      note: this code may be dirty
++    if (conn->cur_doc) {
++      libtnc_imc_BatchEnding(conn->connectionID);
++    }
++
+     // If we still have a batch (ie if the TNCS has not sent a recommendation)
+     // finish any reply batch and send it
+     if (conn->cur_doc)
+diff -u -r libtnc-1.19.orig/src/libtnc/libtnctncs.c libtnc-1.19/src/libtnc/libtnctncs.c
+--- libtnc-1.19.orig/src/libtnc/libtnctncs.c	2008-05-08 05:54:28.000000000 +0200
++++ libtnc-1.19/src/libtnc/libtnctncs.c	2009-03-30 12:51:58.000000000 +0200
+@@ -592,7 +592,7 @@
+ 		{
+ 		    xmlChar* content = xmlNodeGetContent(mcur);
+ 
+-		    type = strtol((const char*)content, NULL, 16);
++		    type = strtoul((const char*)content, NULL, 16); //mbs: BUG here was fixed !!!
+ 		    xmlFree(content);
+ 		}
+ 		else if (!xmlStrcmp(mcur->name, (const xmlChar *) "Base64") 
+diff -u -r libtnc-1.19.orig/src/libtnc/libtncxml.c libtnc-1.19/src/libtnc/libtncxml.c
+--- libtnc-1.19.orig/src/libtnc/libtncxml.c	2008-05-06 12:10:49.000000000 +0200
++++ libtnc-1.19/src/libtnc/libtncxml.c	2009-03-30 12:49:23.000000000 +0200
+@@ -57,7 +57,7 @@
+     xmlNewProp(n, BAD_CAST "Recipient", BAD_CAST recipient);
+     xmlNewProp(n, BAD_CAST "xmlns", BAD_CAST "http://www.trustedcomputinggroup.org/IWG/TNC/1_0/IF_TNCCS#");
+     xmlNewProp(n, BAD_CAST "xmlns:xsi", BAD_CAST "http://www.w3.org/2001/XMLSchema-instance");
+-    xmlNewProp(n, BAD_CAST "xsi:schemalocation", BAD_CAST "http://www.trustedcomputinggroup.org/IWG/TNC/1_0/IF_TNCCS#https://www.trustedcomputinggroup.org/XML/SCHEMA/TNCCS_1.0.xsd");
++    xmlNewProp(n, BAD_CAST "xsi:schemaLocation", BAD_CAST "http://www.trustedcomputinggroup.org/IWG/TNC/1_0/IF_TNCCS# https://www.trustedcomputinggroup.org/XML/SCHEMA/TNCCS_1.0.xsd");
+     xmlDocSetRootElement(doc, n);
+ 
+     return doc;

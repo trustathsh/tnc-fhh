@@ -1,0 +1,5 @@
+// the configured options and settings for tncs
+#define TNCS_CONFIG_FILE "@TNCS_CONFIG_FILE@"
+#define TNCS_CONFIG_DIR "@TNCS_CONFIG_DIR@"
+#define TNCS_CONFIG "@TNCS_CONFIG_DIR@/@TNCS_CONFIG_FILE@"
+

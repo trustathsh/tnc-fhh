@@ -1,0 +1,5 @@
+#IMV-Configuration file of TNC@FHH-TNC-Server
+
+#Example:
+#IMV "Dummy" /path/to/libDummyIMV.so
+

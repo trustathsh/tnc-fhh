@@ -1,0 +1,35 @@
+# This is the CompartmentIMV's policy file.
+# This version supports to specify the integrity
+# status of one reference system by listing the
+# PCR indices and their desired values. Furthermore, you can specify
+# a list of fingerprints that correspond to known, good AIKs
+
+# PCR values of reference system
+# pcrX=<20 byte SHA-1 hash as 40 characters ASCII string>
+pcr0=a234567890123456789012345678901234567890
+pcr2=b234567890123456789012345678901a34567890
+pcr5=c2345678901234567890123f5678901234567890
+pcr13=d23456a8901234567890d234567890f234567890
+
+# Known AIKs, identified by fingerprint of X.509 AIK credential
+aik=DC:30:E6:EA:F1:97:5D:90:E6:AE:D0:A3:C8:62:5C:61:93:9B:96:4B
+aik=DC:30:E6:EA:F1:97:5D:90:E6:AE:D0:A3:C8:62:5C:61:93:9B:96:4C
+aik=DC:30:E6:EA:F1:97:5D:90:E6:AE:D0:A3:C8:62:5C:61:93:9B:96:4D
+aik=DC:30:E6:EA:F1:97:5D:90:E6:AE:D0:A3:C8:62:5C:61:93:9B:96:4E
+
+# Furthermore, it is possible to specify the following options:
+
+# The quoteType influences the way how the Tspi_TPM_Quote
+# function is called.
+#   complete: The IMV sends a PCR_SELECTION struct that includes
+#             all PCRs mentioned in the policy file.   
+#   single:   The IMV sends sequentially a PCR_SELECTION struct that
+#             mentions only one PCR at a time.
+# The complete quoteType allows to check if the client system's
+# PCRs match the values specified in this policy. If they don't,
+# one can not tell which PCRs caused the failures.
+# With quote_type single, the Tspi_TPM_Quote command is called numerous
+# times. Upon each call, only one PCR is quoted. In case of failure,
+# this allows to check which PCRs caused the authentication to fail.
+# Complete is the default behavior.
+quoteType=complete

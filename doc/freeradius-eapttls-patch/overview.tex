@@ -1,0 +1,21 @@
+\subsection{General Information}
+This section describes the concept and implementation of the EAP-TTLS-patch for FreeRADIUS.
+
+\subsubsection*{Goal of the patch}
+The main goal of the patch is to allow multiple inner authentication methods inside an EAP-TTLS-tunnel.
+This could be EAP-MD5 as a user authentication method, followed by EAP-TNC as a hardware or platform authentication method.
+
+\subsubsection*{Specification of the patch}
+The patch in the current version is implemented to do any authentication methods supported by the EAP-module of \texttt{FreeRADIUS} as the first inner method, and EAP-TNC afterwards.
+EAP-TNC is only started if the first method was successful, otherwise the authentication request of the supplicant will result in an Access-Reject.
+If the first inner method was successful, then the outgoing Access-Accept is intercepted and cached, and a new authentication with EAP-TNC is started inside the tunnel.
+
+\subsubsection*{Not implemented}
+At the moment, there is no support for the use of non-EAP-methods as the first inner authentication method.
+Doing so will not properly start EAP-TNC as the second inner method.
+
+\subsubsection*{Used sources}
+The patch was built upon \texttt{FreeRADIUS} version 2.1.7 and tested with \texttt{wpa\_supplicant} version 0.6.9 on Ubuntu 9.04 and 9.10.
+
+\subsubsection*{Documentation in the Trust@FHH-wiki}
+There are How To's for building and configuring the EAP-TTLS-patch in our wiki: \url{http://trust.inform.fh-hannover.de/wiki/index.php/Main_Page}.

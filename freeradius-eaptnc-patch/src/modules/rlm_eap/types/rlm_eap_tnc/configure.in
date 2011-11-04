@@ -1,0 +1,41 @@
+AC_INIT(rlm_eap_tnc.c)
+AC_REVISION($Revision$)
+AC_DEFUN(modname,[rlm_eap_tnc])
+
+eap_tnc_cflags=
+
+if test x$with_[]modname != xno; then
+
+	AC_CHECK_LIB(naaeap,processEAPTNCData,,fail="$fail -lnaaeap",)
+dnl	if test -x"$ac_cv_lib_NAAEAP_processEAPTNCData" == -x"no"; then
+dnl		AC_MSG_WARN([the NAAEAP library was not found!])
+dnl		fail="$fail -lNAAEAP"
+dnl	fi
+	
+	AC_CHECK_HEADERS(naaeap/naaeap.h,,fail="$fail -Inaaeap.h",)
+dnl	if test -x"$ac_cv_header_naaeap_h" == -x"no"; then
+dnl		AC_MSG_WARN([the naaeap header was not found!])
+dnl		fail="$fail -Inaaeap.h"
+dnl	fi
+
+	targetname=modname
+else
+	targetname=
+	echo \*\*\* module modname is disabled.
+fi
+
+dnl  Don't change this section.
+if test x"$fail" != x""; then
+	if test x"${enable_strict_dependencies}" = x"yes"; then
+		AC_MSG_ERROR([set --without-]modname[ to disable it explicitly.])
+	else
+		AC_MSG_WARN([silently not building ]modname[.])
+		AC_MSG_WARN([FAILURE: ]modname[ requires: $fail.]); 
+		targetname=""
+	fi
+fi
+
+AC_SUBST(eap_tnc_cflags)
+
+AC_SUBST(targetname)
+AC_OUTPUT(Makefile)

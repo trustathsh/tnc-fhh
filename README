@@ -1,0 +1,144 @@
+=====================================================
+  _____                _     ____  _____ _   _ _   _ 
+ |_   _|_ __ _   _ ___| |_  / __ \|  ___| | | | | | |
+   | | | '__| | | / __| __|/ / _` | |_  | |_| | |_| |
+   | | | |  | |_| \__ \ |_| | (_| |  _| |  _  |  _  |
+   |_| |_|   \__,_|___/\__|\ \__,_|_|   |_| |_|_| |_|
+                            \____/                   
+
+=====================================================
+
+1. INTRODUCTION
+
+The TNC@FHH project is an open source implementation of the Trusted Network
+Connect (TNC) framework [1] which is specified by the Trusted Computing Group
+(TCG) [2]. TNC@FHH allows you to provision access to a network based upon
+factors like the user credentials and the requesting endpoint's integrity state.
+
+The following TNC components and their respective interfaces are implemented by
+TNC@FHH:
+* IMCs (IF-IMC 1.2)
+* IMVs (IF-IMV 1.2)
+* TNCS (IF-TNCCS 1.1)
+* NAA  (IF-T EAP 1.1)
+
+On the Policy Decision Point, TNC@FHH works as an extension to FreeRADIUS [3].
+FreeRADIUS handles the user authentication and all of the standard EAP message
+processing. TNC@FHH is plugged into FreeRADIUS via a new EAP module that
+supports TNC.
+
+2. INSTALLATION
+
+To build and install all components of TNC@FHH, run the following commands:
+
+* create a directoy that shall contain all files created within the build
+  process, e.g. './build'
+* cd to the new directory
+* call cmake -DCOMPONENT=pdp -DNAL=[8021x|vpn] and specify the path to the tncfhh directory, e.g. 'cmake -D... ../'
+* call make
+* call make install
+* call ldconfig
+
+In short:
+$ mkdir build && cd build && cmake -DCOMPONENT=pdp -DNAL=[8021x|vpn] ../ && make && make install
+
+In order to apply the FreeRADUS patches, do the following:
+* switch to the patch directory, e.g. for eap-tnc
+  $ cd freeradius-eaptnc-patch
+* copy the src directory to the directory containing the FreeRADIUS source
+  files, e.g.:
+  $ cp -r src/ ../freeradius-[version>=2.0.0]/
+* Configure and build FreeRADIUS
+  see http://wiki.freeradius.org/Build
+
+The configuration process of the PDP is quite involved. Detailed information
+about it can be found in the Trust@FHH Wiki [4].
+
+3. STRUCTURE
+
+TNC@FHH consists of several subprojects:
+
+* freeradius-eaptnc-patch
+  Patch for FreeRADIUS to add support for TNC. This is basically a new EAP
+  module that handles the TNC traffic and forwards the TNC specific data to the
+  naaeap module. The patch is implemented in C.
+* freeradius-eapttls-patch
+  Patch for FreeRADIUS to add support for multiple EAP-methods to be tunneld
+  within one EAP-TTLS channel. This explicitly supports to chain multiple EAP
+  methods, i.e. EAP-MD5 (for user authentication) and then EAP-TNC (for
+  endpoint assessment) in one EAP-TTLS tunnel. The patch is implemented in C.
+* naaeap
+  A shared library that is used by the EAP TNC module. It parses the TNC data,
+  handles fragmentation and forwards the parsed data to the tncs module.
+  Outgoing tncs messages are in turn properly encapsulated within EAP TNC.
+  naaeap is implemented in C++.
+* tncs
+  tncs is a shared library that is used by the naaeap module. It represents the
+  TNC TNCS component and is therefore primarily responsible for handling the
+  IMVs that are installed on the PDP. tncs is implemented in C++.
+* imunit
+  imunit is a framework for developing imc/v pairs. All TNC@FHH imc/v pairs are
+* tncutil
+  A shared library that offers simple configuration file parsing.
+* tncxacml
+  A shared library that enables support for the evaluation of measurements via
+  a XACML PDP. It uses xercesc and boost for creating and parsing the XML data 
+  and sending/receiving the requests/responses to/from the XACML PDP. 
+  based upon imunit. imunit is implemented in C++.
+* imc/v pairs
+  TNC@FHH comes with a set of working imc/v pairs:
+  - example
+    A hello world example of an imc/v pair.
+  - dummy
+    Another hello world example with a bit more functionality.
+  - clamav
+    Checks the status of the AV software clamav.
+  - platid
+    Allows to authenticate an endpoint based upon X.509 certificates (supports
+    TPMs)
+  - hostscanner
+    Allows to check the status of arbitrary ports on an endpoint.
+* tncsim
+  This is a simple test program that acts both as TNCC and TNCS, but without an
+  NAR or NAA component. It was developed to ease the testing of IMC/V pairs.
+  It uses libtnc as client and TNC@FHH tncs as server. tncsim can load
+  both IMCs and IMVs and starts a single TNC handshake by calling
+  beginHandhake() for each IMC.
+
+In order to set up a working test environment, you will need FreeRADIUS on the
+PDP, a supplicant that supports TNC on the AR (like wpa_supplicant), and a
+switch that supports 802.1X.
+
+To run a quick test with the shipped IMC/V pairs, use tncsim. The default
+configuration uses the exampleimc/v.
+
+4. ADDITIONAL INFORMATION
+
+The 'doc' directoy contains more detailed information about TNC@FHH, including
+class and sequence diagrams. For general information about TNC, please refer to
+the official TCG website or to the Trust@FHH research group's website [5].
+
+5. FEEDBACK
+
+We really appreciate any feedback about TNC@FHH. If you find bugs, feel free to
+report them via email to trust@f4-i.fh-hannover.de or issue a bug report in our
+bugtracking system [6]
+
+6. ACKNOWLEDGEMENT
+
+TNC@FHH is implemented by the Trust@FHH research group of the Fachhochschule
+Hannvover, the University of Applied Sciences and Arts, located in Lower Saxony,
+Germany [7]. Parts of this work have been carried out within the tNAC research
+project (support code 1704B08) which is funded by the german BMBF (Federal
+Ministry of Education and Research) [8].
+
+7. REFERENCES
+
+[1] http://www.trustedcomputinggroup.org/developers/trusted_network_connect
+[2] http://www.trustedcomputinggroup.org
+[3] http://freeradius.org/
+[4] http://trust.inform.fh-hannover.de/wiki/index.php/Main_Page  
+[5] http://trust.inform.fh-hannover.de/
+[6] https://trust.inform.fh-hannover.de/mantis/
+[7] http://www.fh-hannover.de/ 
+[8] http://www.bmbf.de/en/index.php

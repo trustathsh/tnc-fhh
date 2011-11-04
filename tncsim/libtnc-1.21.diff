@@ -1,0 +1,13 @@
+# diff was created by Mike Steinmetz (mbs) 2009-08-12
+diff -u -r libtnc-1.21-orig/src/libtnc/libtncxml.c libtnc-1.21/src/libtnc/libtncxml.c
+--- libtnc-1.21-orig/src/libtnc/libtncxml.c	2009-08-12 11:38:20.000000000 +0200
++++ libtnc-1.21/src/libtnc/libtncxml.c	2009-08-23 15:53:11.000000000 +0200
+@@ -57,7 +57,7 @@
+     xmlNewProp(n, BAD_CAST "Recipient", BAD_CAST recipient);
+     xmlNewProp(n, BAD_CAST "xmlns", BAD_CAST "http://www.trustedcomputinggroup.org/IWG/TNC/1_0/IF_TNCCS#");
+     xmlNewProp(n, BAD_CAST "xmlns:xsi", BAD_CAST "http://www.w3.org/2001/XMLSchema-instance");
+-    xmlNewProp(n, BAD_CAST "xsi:schemaLocation", BAD_CAST "http://www.trustedcomputinggroup.org/IWG/TNC/1_0/IF_TNCCS#https://www.trustedcomputinggroup.org/XML/SCHEMA/TNCCS_1.0.xsd");
++    xmlNewProp(n, BAD_CAST "xsi:schemaLocation", BAD_CAST "http://www.trustedcomputinggroup.org/IWG/TNC/1_0/IF_TNCCS# https://www.trustedcomputinggroup.org/XML/SCHEMA/TNCCS_1.0.xsd"); // mbs - fixed a XML-Bug
+     xmlDocSetRootElement(doc, n);
+ 
+     return doc;

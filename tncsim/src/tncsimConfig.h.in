@@ -1,0 +1,4 @@
+// the configured options and settings for tncsim
+#define TNCSIM_CONFIG_FILE "@TNCSIM_CONFIG_FILE@"
+#define TNCSIM_CONFIG_DIR "@TNCSIM_CONFIG_DIR@"
+#define TNCSIM_CONFIG "@TNCSIM_CONFIG_DIR@/@TNCSIM_CONFIG_FILE@"

@@ -1,0 +1,897 @@
+\documentclass[a4paper,10pt]{scrartcl}
+\usepackage{hyperref}
+\hypersetup{
+    unicode=false,          % non-Latin characters in Acrobat’s bookmarks
+    pdftoolbar=true,        % show Acrobat’s toolbar?
+    pdfmenubar=true,        % show Acrobat’s menu?
+    pdffitwindow=false,     % window fit to page when opened
+    pdfstartview={FitH},    % fits the width of the page to the window
+    pdftitle={TNC@FHH documentation version 0.7.0},    % title
+    pdfauthor={Author},     % author
+    pdfsubject={Subject},   % subject of the document
+    pdfcreator={Creator},   % creator of the document
+    pdfproducer={Producer}, % producer of the document
+    pdfkeywords={keywords}, % list of keywords
+    pdfnewwindow=true,      % links in new window
+    colorlinks=true,        % false: boxed links; true: colored links
+    linkcolor=blue,          % color of internal links
+    citecolor=green,        % color of links to bibliography
+    filecolor=magenta,      % color of file links
+    urlcolor=blue           % color of external links
+}
+
+\usepackage{graphicx}
+
+\usepackage{listings,color}   %% color für Farbmarkierungen
+\definecolor{LightBlue}{rgb}{0.9, 0.9, 1.0}
+\definecolor{LightRed}{rgb}{1.0, 0.9, 0.8}
+\definecolor{LightGreen}{rgb}{0.1, 0.7, 0.1}
+\lstset{ basicstyle=\ttfamily\scriptsize,%\scriptsize,
+		keywordstyle=\color{blue},
+		identifierstyle=\bfseries,
+        commentstyle=\color{LightGreen},
+		language=C++,
+		frame=none,
+		showstringspaces=false,
+		backgroundcolor=\color{LightBlue},
+        breaklines=true}
+
+% listings for freeradius-eapttls-config files
+\lstdefinestyle{eapttls-config}{language=sh, % Sprache = sh
+	basicstyle=\ttfamily\scriptsize,%\scriptsize,
+	keywordstyle=\color{blue},
+	commentstyle=\color{LightGreen},
+	stringstyle=\color{red},
+	breaklines=true,
+	keepspaces=true,
+	showstringspaces=false,
+	frame=none,
+	backgroundcolor=\color{LightBlue}}
+
+% newcommand \code{}
+
+\newcommand{\code}[1]{{\tt{#1}}}
+
+% newcommands for freeradius-eapttls-patch files
+\newcommand{\radd}[1]{\texttt{#1}}	% for debug-output
+\newcommand{\radf}[1]{\textsc{#1}} % for files
+\newcommand{\radm}[1]{\textsl{#1}} % for methods
+
+%opening
+
+\begin{document}
+\titlehead{
+\begin{minipage}{0.55\textwidth}
+  {\Large Fachhochschule Hannover\\}
+  University of Applied Sciences and Arts\\
+  Faculty IV - Department of Computer Science\\
+  Trust@FHH Research Group\\
+  \url{http://trust.inform.fh-hannover.de}\\
+  \href{mailto:trust@f4-i.fh-hannover.de}{trust@f4-i.fh-hannover.de}
+\end{minipage}
+\begin{minipage}{0.45\textwidth}
+  \hfill
+  \includegraphics[width=0.9\textwidth,height=!]{figures/logo-trustfhh.pdf}
+\end{minipage}
+}
+\subject{Documentation Version 0.7.0}
+\title{TNC@FHH \\~\\ An Open Source TNC Implementation}
+%\subtitle{Klein aber fein?} % geht nicht unter ubuntu 9.10 texlive version
+\author{Ingo Bente, Bastian Hellmann, Jan Bernhardt, Arne Welzel}
+\date{\today}
+\publishers{Trust@FHH Research Group}
+
+\maketitle
+
+\tableofcontents
+
+\begin{abstract}
+This documentation describes the TNC@FHH software version 0.7.0. It covers all
+subprojects of TNC@FHH and highlights the overall project structure. Furthermore,
+it gives examples how to use parts of the TNC@FHH framework in your own projects (like
+coding your own IMC/V based upon TNC@FHH). This document is (although contained in
+this release) still a work in progress. We try to keep it up to date, but some sections might refer to older versions of TNC@FHH\footnote{E.g., some of the UML diagrams refer to version 0.6.0 since there were no substantial changes.}. Please report any issues related to it to
+\href{mailto:trust@f4-i.fh-hannover.de}{trust@f4-i.fh-hannover.de}. This document
+does \emph{not} describe all configuration options and tasks in order to set up
+a TNC@FHH environment. For installation and configuration issues, please
+refer to the README file and to our wiki: \url{http://trust.inform.fh-hannover.de/wiki}.
+\end{abstract}
+
+% ==============================================================================
+\section{Introduction}
+The TNC@FHH project is an open source implementation of the Trusted Network
+Connect (TNC) framework which is specified by the Trusted Computing Group
+(TCG). TNC@FHH allows you to provision access to a network based upon
+factors like the user credentials and the requesting endpoint's integrity state.
+
+The following TNC components and their respective interfaces are implemented by
+TNC@FHH:
+\begin{itemize}
+	\item IMCs (IF-IMC 1.2)
+	\item IMVs (IF-IMV 1.2)
+	\item TNCS (IF-TNCCS 1.1)
+	\item NAA  (IF-T EAP 1.1)
+\end{itemize}
+
+On the Policy Decision Point, TNC@FHH works as an extension to FreeRADIUS.
+FreeRADIUS handles the user authentication and all of the standard EAP message
+processing. TNC@FHH is plugged into FreeRADIUS via a new EAP module that
+supports TNC.
+
+\section{Project Structure}
+TNC@FHH consists of several subprojects:
+\begin{description}
+    \item[freeradius-eaptnc-patch] Patch for FreeRADIUS to add support for TNC. This is basically a new EAP
+    module that handles the TNC traffic and forwards the TNC specific data to the
+    naaeap module. The patch is implemented in C.
+     \item[freeradius-eapttls-patch] Patch for FreeRADIUS to add support for multiple EAP-methods to be tunneld within one EAP-TTLS channel. This explicitly supports
+     to chain multiple EAP methods, i.e. EAP-MD5 (for user authentication) and then EAP-TNC (for endpoint assessment) in one EAP-TTLS tunnel.
+     The patch is implemented in C.
+    \item[naaeap] A shared library that is used by the EAP TNC module. It parses the EAP-TNC data,
+    handles fragmentation and forwards the parsed data (i.e. a TNCCS message) to the tncs module.
+    Outgoing TNCCS messages are in turn properly encapsulated within EAP TNC.
+    naaeap is implemented in C++.
+    \item[tncs] tncs is a shared library that is used by the naaeap module. It represents the
+    TNCS component within the TNC architecture. tncs handles the communication with the IMVs that are installed on the PDP and the TNCC on the AR. tncs is implemented in C++.
+    \item[imunit] imunit is a framework for developing IMC/V pairs. All TNC@FHH IMC/V pairs are
+    based upon imunit. imunit is implemented in C++.
+    \item[IMC/V pairs] TNC@FHH comes with a set of working IMC/V pairs:
+    \begin{itemize}
+    	\item example: A hello world example of an imc/v pair.
+    	\item dummy: Another hello world example with a bit more functionality.
+    	\item clamav: Checks the status of the AV software clamav.
+    	\item platid: Allows to authenticate an endpoint based upon X.509 certificates (supports
+        TPMs)
+    	\item attestation: Allows to verify the integrity of an endpoint based on TPM attestation (using AIKs).
+        \item hostscanner: Allows to check the status of arbitrary ports on an endpoint.
+    \end{itemize}
+    \item[tncsim] This is a simple test program that acts both as TNCC and TNCS,
+    but without an NAR or NAA component. It was developed to ease the testing of
+    IMC/V pairs. It uses libtnc as client and TNC@FHH tncs as server. tncsim can
+    load both IMCs and IMVs and starts a single TNC handshake by calling
+    \texttt{beginHandhake()} for each IMC. tncsim is implemented in C++.
+\end{description}
+
+Figure \ref{fig:tncfhh-project-structure} gives an overview of the existing subprojects and der dependencies.
+\begin{figure}
+ \centering
+   \includegraphics[width=\textwidth,height=!]{figures/tncfhh-project-structure-0-7-0.pdf}
+ \caption{Project Structure of TNC@FHH}
+ \label{fig:tncfhh-project-structure}
+\end{figure}
+
+Detailed information about each subproject is given in the following sections.
+
+% ==============================================================================
+\section{Building and Installing TNC@FHH}
+Since version 0.7.0, there is only one TNC@FHH tarball available that contains all
+software components. This makes the build and install process a lot easier. The
+following prerequisites should be fulfilled in order to be able to build all TNC@FHH components:
+\begin{itemize}
+    \item cmake\\
+	(use the version provided by your distribution)
+    \item log4cxx (mandatory for all components)\\
+	(use the version provided by your distribution)
+	\item xerces-c (needed by tncs)\\
+	(use the version provided by your distribution)
+	\item trousers $>=$ 0.3.4 (needed by attestation IMC)\\ \url{http://sourceforge.net/projects/trousers/}
+	\item libtnc $>=$ 1.24 (needed by tncsim)\\ \url{http://sourceforge.net/projects/libtnc/}
+\end{itemize}
+
+To build (and optionally install) TNC@FHH with its default configuration, just do the following:
+
+\begin{lstlisting}
+// extract archive
+tar -xzf tncfhh-0.7.0.tar.gz
+// switch to directory
+cd tncfhh-0.7.0
+// create build directory
+mkdir build
+// switch to build directory
+cd build
+// build (and optionally install) TNC@FHH
+cmake ../
+make
+make install
+\end{lstlisting}
+
+This will build (and install) all IMCs, all IMVs, imunit, naaeap, tncs and tncsim. This
+\emph{will not} build or install any of the FreeRADIUS patches. The process to patch your FreeRADIUS server in order to use TNC@FHH is described in our wiki\footnote{\url{http://trust.inform.fh-hannover.de/wiki/index.php/Main_Page}}.
+
+There are some cmake variables available to configure which TNC@FHH components are actually build:
+\begin{itemize}
+	\item \texttt{TNCFHH\_BUILD\_IMCS} (ON/OFF)\\ Controls whether IMCs are built or not. Default is ON.
+	\item \texttt{TNCFHH\_BUILD\_IMVS} (ON/OFF)\\ Controls whether IMVs are built or not. Default is ON.
+	\item \texttt{TNCFHH\_BUILD\_SERVER} (ON/OFF)\\ Controls whether naaeap and tncs are built or not. Default is ON.
+	\item \texttt{TNCFHH\_BUILD\_TNCSIM} (ON/OFF)\\ Controls whether tncsim is built or not. Default is ON (implies that
+	naaeap and tncs are built as well).
+\end{itemize}
+
+If you get error messages during the  build process, make sure that you fulfill the necessary prerequisites. E.g. make sure that you have libtnc
+if you want to build tncsim or trousers for the attestation IMC. If you want to exclude single IMCs or IMVs from the build process, just comment out
+the corresponding \texttt{add\_subdirectory} statement in the CMakeLists.txt file (e.g. in \texttt{imcv/attestation/CMakeLists.txt:4}).
+
+In order to actually use the TNC@FHH components, you need
+\begin{itemize}
+	\item a patched FreeRADIUS server on the PDP
+	\item a 802.1X supplicant that supports TNC (we suggest wpa\_supplicant\footnote{\url{http://hostap.epitest.fi/wpa_supplicant/}}). Note that you need wpa\_supplicant version 0.7.1 or higher in order to use the platid and attestation IMC.
+	\item a 802.1X compatible switch
+\end{itemize}
+Details on how to set up a working TNC environment are available in our wiki\footnote{\url{http://trust.inform.fh-hannover.de/wiki}}.
+
+% ==============================================================================
+\section{freeradius-eaptnc-patch}
+\subsection{General Information}
+The patch adds a new EAP-TNC method to FreeRADIUS. An outdated version of this
+patch is already contained in the FreeRADIUS source tree. However, to get the latest
+version of TNC@FHH running, you will need to apply the patch that is contained
+in this TNC@FHH release. The EAP-TNC method can be used as tunneld EAP method,
+e.g. within EAP-TTLS.
+
+\subsection{Architecture}
+The architecture is quite simple. The EAP module just hooks into FreeRADIUS by implementing
+the necessary functions in \texttt{rlm\_eap\_tnc.c} and letting FreeRADIUS know about them:
+\begin{lstlisting}
+/*
+ * The module name should be the only globally exported symbol.
+ * That is, everything else should be 'static'.
+ */
+ EAP_TYPE rlm_eap_tnc = {
+  "eap_tnc",
+  tnc_attach, /* attach */
+  tnc_initiate, /* Start the initial request */
+  NULL, /* authorization */
+  tnc_authenticate, /* authentication */
+  tnc_detach /* detach */
+};
+\end{lstlisting}
+
+\begin{itemize}
+	\item \texttt{tnc\_attach} This function is called when an instance of the EAP-TNC-module is created. This happens when FreeRADIUS parses the corresponding EAP configuration
+	file (\texttt{eap.conf}). The function initializes the naaeap module.
+	\item \texttt{tnc\_initiate} This function is called when a new handshake with EAP-TNC is about to begin. The handshake is triggered by an incoming EAP-Response/Identity message from the client.
+    The function checks for the presence of a secure tunnel, so that EAP-TNC is not run standalone but within a secure EAP-method. Then it calculates the connection ID for this handshake and creates 
+    the first EAP-TNC-Request message which is sent to the client.
+	\item \texttt{tnc\_authenticate} This function is called when a EAP-TNC-Response message was received. It basically forwards the EAP-TNC data to the naaeap module and composes an appropriate EAP-Response message. When the TNC handshake is finished, the result is forwarded to FreeRADIUS via the configuration-item \texttt{TNC-Status} for the corresponding connection. TNC-Status can have the values \texttt{Access} or \texttt{Isolate}. This value will than be processed by FreeRADIUS which maps it to a VLAN-assigment for the current client.
+	\item \texttt{tnc\_detach} This function handles the destruction of an instance of the EAP-TNC-module. This happens when FreeRADIUS is stopped. It deinitializes the naaeap module.
+\end{itemize}
+
+The code in \texttt{eap\_tnc.c} just (de)marshalls the TNC payload in the EAP packet. The main logic described above is located in \texttt{rlm\_eap\_tnc.c}.
+For further details, please refer to the sourcecode.
+
+% ==============================================================================
+\section{freeradius-eapttls-patch}
+
+\input{freeradius-eapttls-patch/overview}
+\input{freeradius-eapttls-patch/rlm_eap_ttls}
+\input{freeradius-eapttls-patch/raw_flow_of_operations}
+\input{freeradius-eapttls-patch/detailed_flow_of_operations}
+\input{freeradius-eapttls-patch/sequence_diagrams}
+\input{freeradius-eapttls-patch/configuration}
+
+% ==============================================================================
+\section{naaeap}
+\subsection{General Information}
+The naaeap library processes the TNC specific data that was extracted out of the
+EAP-TNC packet by the EAP-TNC module of FreeRADIUS / forwards TNC data for encapsulation
+within EAP to that module. The main purpose of naaeap is to handle fragmentation
+and establish the communication context to the tncs module.
+
+\subsection{Architecture}
+naaeap is provided as shared library. The classes contained are basically separated into
+classes providing logic and into classes providing simple entities. Since naaeap
+is used by the EAP-TNC module (which is written in C), naaeap exposes a C interface
+defined in \texttt{naaeap.h}. The interface includes functions for initialization, connection
+management and the processing of TNC data. Most of the calls (except those
+that deal with Fragmentation) are forwarded to the tncs module.
+
+\begin{figure}
+ \centering
+ \includegraphics[width=\textwidth]{design/tncfhh-class-sequence-diagrams-0-6-0/nal-class-0-6-0-light.png}
+ \caption{naaeap class diagram (overview)}
+ \label{fig:naaeap-overview}
+\end{figure}
+
+
+% ==============================================================================
+\section{tncs}
+\subsection{General Information}
+The tncs receives incoming TNCCS and IMCIMV messages. TNCCS messages
+(like preferred language) are directly processed by the tncs. IMCIMV messages are
+forwarded to the corresponding IMVs. Routing is based upon the respective message
+types. The tncs is responsible for correctly loading/initializing/calling and
+terminating all IMVs (those that are specified in the tnc\_config file). Currently,
+tncs supports only IF-TNCCS 1.1. Approaches to integrate IF-TNCCS-SoH have not
+been finished yet.
+
+\subsection{Architecture}
+The TNC server implementation of TNC@FHH. Exposes a C++ interface that is used
+by naaeap. The C++ interface is defined in \texttt{Coordinator.h}. It includes
+only few methods. The most important ones deal with initialization, connection management
+and the processing of TNC data.
+
+\begin{figure}
+ \centering
+ \includegraphics[width=\textwidth]{design/tncfhh-class-sequence-diagrams-0-6-0/iel-class-0-6-0-light.png}
+ \caption{tncs class diagram (overview)}
+ \label{fig:tncs-overview}
+\end{figure}
+
+\section{imunit}
+\subsection{General Information}
+imunit provides an easy to use framework for the development of new IMC/IMV
+pairs. imunit compiles and runs on many Unix-like systems. Windows is currently
+not supported. However, we assume that Windows-support would need only minor
+modifications of the build process.\footnote{Appropriate patches are very
+welcome ...}
+
+The following TNC interfaces are supported by imunit
+\begin{itemize}
+ \item IF-IMC 1.2 (\url{http://www.trustedcomputinggroup.org/resources/tnc_ifimc_specification})
+ \item IF-IMV 1.2 (\url{http://www.trustedcomputinggroup.org/resources/tnc_ifimV_specification})
+\end{itemize}
+
+To demonstrate the use of imunit for the development of new IMC/V pairs, TNC@FHH
+contains a very basic exampleimc/v pair.
+
+\subsection{Architecture}
+Figure \ref{fig:imunit-overview} gives an overview of the imunit package. The components and
+their functions will be described in the following.
+\begin{figure}
+ \centering
+ \includegraphics[width=\textwidth]{design/tncfhh-class-sequence-diagrams-0-6-0/iml-class-0-6-0-light.png}
+ \caption{imunit class diagram (overview)}
+ \label{fig:imunit-overview}
+\end{figure}
+
+On Unix-like Systems, IMCs and IMVs are provided as shared objects (\verb+*.so+). The IMC/V modules
+can be used via the IF-IMC/V interface. These interfaces are specified as C-functions. However, the imunit
+package is mostly written in C++, allowing us to use an object-oriented design internally.
+
+Besides the C/C++ mapping, there is another interesting issue regarding the instantiation of objects:
+in imunit, there is one class that represents the shared library itself (named IMCLibrary/IMVLibrary). Normally,
+for a specific IMC or IMV shared library, there will be one object of this class for each TNCC/TNCS running on a platform.
+
+To address the issue that
+a TNCC/TNCS can handle multiple connections in parallel, there needs to be a connection-based representation of an IMC/IMV.
+This representation is provided by the AbstractIMC/AbstractIMV class. Normally, there will be one object of this class
+for each connection that is handled by a TNCC/TNCS on a platform. As a developer of an IMC/V pair, you have to provide your
+own implementation of IMCLibrary and AbstractIMC or IMVLibrary and AbstractIMV by inhereting from the classes of the imunit package. The good
+thing is that you do not have to deal with plain C this way.
+
+In the following, we will give a short description of each class available in the imunit package. How they can be used to develop
+a simple ExampleIMC/V will be discussed in section \ref{sec:example-imcv}.
+
+\subsection{General Classes}
+\paragraph{IMUnitLibrary} This class encapsulates the similarities of an IMC and an IMV library. There is exactly one instance of this class
+for each TNCC or TNCS that uses the corresponding IMC or IMV library. The main purpose of this class is to provide general information about the
+library (name, message types used) and to handle the (de)initialization process. Direct known subclasses are IMCLibrary and IMVLibrary.
+
+\paragraph{AbstractIMUnit} This class encapsulates the similarities of an IMC and an IMV instance that is bound to a specific connection. The connection
+is handled via the TNCC or the TNCS. There is normally one instance of this class for each ongoing connection. The class implements methods
+that are available for IMCs and for IMVs (notifyConnectionChange(), batchEnding() and receiveMessage()). Direct known subclasses are AbstractIMC
+and AbstractIMV.
+
+\paragraph{ResultException}
+A simple exception class. Extends \verb+std::exception+. This class can carry a \verb+TNC_Result+ return value. Exceptions of this class
+are used internally in the imunit package to handle errors in a more convenient way than it is possible with simple return values. If a TNCC/TNCS
+must be notified about an error, the ResultException can be easily mapped to a simple \verb+TNC_Result+ value that is return by an interface C-function.
+This class has no known subclasses.
+
+\subsection{IMC-specific Classes}
+\paragraph{IMCLibrary}
+This class inherits from IMUnitLibrary and encapsulates all IMC specific functionalities of an IMC library. This class multiplexes incoming calls
+from an TNCC to a conrete instance of AbstractIMC. Furthermore, it holds all pointers to the TNCC functions as specified by IF-IMC. IMC developers
+must extend this class to implement their own IMC library. IMCLibrary defines a pure virtual factory method (createNewImcInstance()) that must
+be implemented by the IMC developer.
+
+\paragraph{AbstractIMC}
+This class inherits from AbstractIMUnit. It represents instances of an IMC that are bound to a certain connection. It manages the state
+of a concrete IMC related to a given connection ID. IMC developers must extend this class to implement their own IMC.
+This class defines a pure virtual method (beginHandshake()) that must be implemented by the IMC developer.
+
+\paragraph{TNCC}
+This is an interface class that encapsulates all TNCC functions of the IF-IMC interface. It allows AbstractIMC (and the sub-classes implemented
+by an IMC developer) to call the TNCC via an instance of this class (instead of directly using C-function pointers). TNCC has no known sub-classes.
+
+\paragraph{IFIMCImpl.cpp (deprecated)}
+This "`class"' is actually no class. It contains the mapping from C to C++ for the IMC functions
+of IF-IMC. \emph{Note:} This file is empty since version 0.6.0. Its content has been moved to the \verb+TNCFHH_IMCLIBRARY_INITIALIZE+ macro
+in IMCLibrary.h. The file will be removed from imunit in the next release.
+
+\subsection{IMV-specific Classes}
+\paragraph{IMVLibrary}
+This class inherits from IMUnitLibrary and encapsulates all IMV specific functionalities of an IMV library. This class multiplexes incoming calls
+from an TNCS to a conrete instance of AbstractIMV. Furthermore, it holds all pointers to the TNCS functions as specified by IF-IMV. IMV developers
+must extend this class to implement their own IMV library. IMVLibrary defines a pure virtual factory method (createNewImvInstance()) that must
+be implemented by the IMV developer.
+
+\paragraph{AbstractIMV}
+This class inherits from AbstractIMUnit. It represents instances of an IMV that are bound to a certain connection. It manages the state
+of a concrete IMV related to a given connection ID. IMV developers must extend this class to implement their own IMV.
+
+\paragraph{TNCS}
+This is an interface class that encapsulates all TNCS functions of the IF-IMV interface. It allows AbstractIMV (and the sub-classes implemented
+by an IMV developer) to call the TNCS via an instance of this class (instead of directly using C-function pointers). TNCS has no known sub-classes.
+
+\paragraph{IFIMVImpl.cpp (deprecated)}
+This "`class"' is actually no class. It contains the mapping from C to C++ for the IMV functions
+of IF-IMV. \emph{Note:} This file is empty since version 0.6.0. Its content has been moved to the \verb+TNCFHH_IMVLIBRARY_INITIALIZE+ macro
+in IMVLibrary.h. The file will be removed from imunit in the next release.
+
+% ==============================================================================
+\section{IMC/V Pairs}
+\subsection{TNC@FHH IMC/V Pairs Message Types}\label{sec:message-types}
+TNC@FHH IMC/V pairs use the following message types:
+\begin{itemize}
+	\item vendord id (FHH IANA PEN): 0x0080ab
+	\item example: 0xfe
+	\item dummy: 0x31
+	\item clamav: 0x41
+	\item platid: 0x33
+	\item attestation: 0x34
+	\item hostscanner: 0x30
+\end{itemize}
+
+\subsection{example}\label{sec:example-imcv}
+\subsubsection{General Information}
+This is a helloworld example for an IMC/V that is implemented based upon imunit.
+In the remainder of this section, a step-by-step guide that explains how to implement
+your own IMC/V based upon imunit is given.
+
+\subsubsection{Architecture}
+The architecture of the exampleimc/v is very simple. There are just four classes
+for both the IMC and the IMV:
+\begin{itemize}
+	\item ExampleIMCLibrary
+	\item ExampleIMC
+	\item ExampleIMVLibrary
+	\item ExampleIMV
+\end{itemize}
+Each class extends the corresponding imunit class. There are no external files,
+processes or programs used by the exampleimc/v.
+
+\subsubsection{Coding the exampleimc}
+\begin{enumerate}
+ \item Create a class ExampleIMCLibrary that extends IMCLibrary.
+ \begin{enumerate}
+  \item Define the message types for your IMC. Normally, each IMC has its own message type\footnote{This
+  will likely change when IF-M is released.} (done in ExampleIMCLibrary.h). The message type is used for two purposes: 1) it is used
+  to indicate the type of messages send to the TNCC and 2) it is used to tell the TNCC which message types the IMC is interested in receiving.
+  \begin{lstlisting}
+  /* define Vendor ID (see IANA PEN). */
+  #define VENDOR_ID 0x0080ab
+  /* define Messagesubtype */
+  #define MESSAGE_SUBTYPE 0xfe
+  \end{lstlisting}
+
+  \item Implement a ctor (and dtor if necessary). Add your message type defined above to the list
+  of message types the IMC wants to receive.
+  \begin{lstlisting}
+  ExampleIMCLibrary::ExampleIMCLibrary()
+  {
+    LOG4CXX_INFO(logger, "Load ExampleIMC library ");
+    /* set all attributes inherited from tncfhh::iml::IMCLibrary */
+    // the library name for logging
+    this->imUnitLibraryName = "ExampleIMC";
+    // add an messageType composed of Vendor ID (IANA PEN) and MessageSubtype
+    this->addMessageType(VENDOR_ID, MESSAGE_SUBTYPE);
+  }
+  \end{lstlisting}
+
+  \item Initialize the imunit framework (done in ExampleLibrary.cpp). This defines
+  the C-functions interface according to IF-IMC and maps those functions to C++ methods
+  of imunit. You must provide the class name of your ExampleIMCLibrary implementation
+  as argument. This causes the framework to create an instance of ExampleIMCLibrary
+  within the initialization macro.
+  \begin{lstlisting}
+  // TNC@FHH IMCLibrary Initialization +
+  // implement IF-IMC c-functions
+  TNCFHH_IMCLIBRARY_INITIALIZE(ExampleIMCLibrary) ;
+  \end{lstlisting}
+
+  \item Implement the pure virtual factory method. This method creates a new instance of
+  the ExampleIMC class (described in step 2). The method is called when a new connection
+  is created. The memory is freed when the same connection is deleted.
+  \begin{lstlisting}
+  tncfhh::iml::AbstractIMC *ExampleIMCLibrary::createNewImcInstance(TNC_ConnectionID conID)
+  {
+    LOG4CXX_TRACE(logger, "createNewImcInstance( " << conID << ")");
+    // just return a new instance of ExampleIMC
+    return new ExampleIMC(conID, this);
+  }
+  \end{lstlisting}
+ \end{enumerate}
+
+ \item Create a class ExampleIMC that extends AbstractIMC.
+ \begin{enumerate}
+  \item Define the ctor (and dtor if necessary). The ctor needs the connection ID and a pointer to the
+  corresponding ExampleIMCLibrary as arguments. Internally, this causes the instantiation of a TNCC object
+  which can forward the calls to the ``real'' TNCC via the pointer to the ExampleIMCLibrary (which holds the
+  function pointers to the ``real'' TNCC). The benefit is: you as IMC developer can call methods of the TNCC
+  instantiation to talk to the ``real'' TNCC.
+  \begin{lstlisting}
+  ExampleIMC::ExampleIMC(TNC_ConnectionID conID, ExampleIMCLibrary *pExampleIMCLibrary)
+    :AbstractIMC(conID, pExampleIMCLibrary)
+  {
+    // initialize
+  }
+  \end{lstlisting}
+
+  \item Implement the (pure virtual) mandatory beginHandshake() method. In this case, our IMC sends a first message
+  to its ExampleIMV (by calling sendMessage() of the TNCC).
+  \begin{lstlisting}
+  TNC_Result ExampleIMC::beginHandshake()
+  {
+    LOG4CXX_TRACE(logger, "beginHandshake()");
+    // this message should be send to ExampleIMV
+    std::string sendMessage("Example message from ExampleIMC");
+    LOG4CXX_TRACE(logger, "Send Message: " << sendMessage);
+    // send message
+    this->tncc.sendMessage((unsigned char*)sendMessage.c_str(), sendMessage.size()+1/*for'\0'*/, VENDOR_ID, MESSAGE_SUBTYPE);
+    // return all ok
+    return TNC_RESULT_SUCCESS;
+  }
+  \end{lstlisting}
+
+  \item Implement optional methods. These are already implemented by the imunit
+  framework. But normally, to have them behave in a reasonable (from the IMC developers point of view) manner,
+  these should be overwritten. We will override all optional methods.
+  \begin{enumerate}
+   \item Implement receiveMessage(). This is called to deliver a message from the IMV which was received by the TNCC to the IMC. Here, our IMC just
+   sends another message.
+  \begin{lstlisting}
+  TNC_Result ExampleIMC::receiveMessage(TNC_BufferReference message, TNC_UInt32 messageLength, TNC_MessageType messageType)
+  {
+    LOG4CXX_DEBUG(logger, "receiveMessage round " << this->getRound());
+    // print received message dirty out. WARNING: don't ape this,
+    // message should end with non-null! Heed: Message can be evil!
+    LOG4CXX_INFO(logger, "Received Message: " << message);
+    // this message should be send to ExampleIMV
+    std::string sendMessage("Another example message from ExampleIMC.");
+    LOG4CXX_INFO(logger, "Send Message: " << message);
+    // send message
+    this->tncc.sendMessage((unsigned char*)sendMessage.c_str(), sendMessage.size()+1/*for'\0'*/, VENDOR_ID, MESSAGE_SUBTYPE);
+    // return all ok
+    return TNC_RESULT_SUCCESS;
+  }
+  \end{lstlisting}
+
+  \item Implement batchEnding(). Here, it basically does nothing.
+  \begin{lstlisting}
+  TNC_Result ExampleIMC::batchEnding()
+  {
+    LOG4CXX_TRACE(logger, "batchEnding");
+    // return all ok
+    return TNC_RESULT_SUCCESS;
+  }
+  \end{lstlisting}
+
+  \item Implement notifyConnectionChange(). The new connection state can be queried via the getConnectionState() method.
+  Here, it basically does nothing. Normally, you would change the state of your IMC according to the connection state.
+  \begin{lstlisting}
+  TNC_Result ExampleIMC::notifyConnectionChange()
+  {
+    LOG4CXX_TRACE(logger, "notifyConnectionChange");
+    /* if new handshake start */
+    if(this->getConnectionState() == TNC_CONNECTION_STATE_HANDSHAKE)
+    /* reset IMC */;
+    // return all ok
+    return TNC_RESULT_SUCCESS;
+  }
+  \end{lstlisting}
+
+  \end{enumerate}
+
+ \end{enumerate}
+ \item Finished. Thats all for the IMC part.
+\end{enumerate}
+
+\subsubsection{Coding the exampleimv}
+Coding the ExampleIMV conceptually works the same as coding the ExampleIMC. There are only minor differences
+regarding which methods must be overwritten/implemented.
+\begin{enumerate}
+ \item Create a class ExampleIMVLibrary that extends IMVLibrary.
+ \begin{enumerate}
+  \item Define the message types for your IMV. Normally, each IMV has its own message type\footnote{This
+  will likely change when IF-M is released.} (done in ExampleIMVLibrary.h). The message type is used for two purposes: 1) it is used
+  to indicate the type of messages send to the TNCS and 2) it is used to tell the TNCS which message types the IMV is interested in receiving.
+  \begin{lstlisting}
+  /* define Vendor ID (see IANA PEN). */
+  #define VENDOR_ID 0x0080ab
+  /* define Messagesubtype */
+  #define MESSAGE_SUBTYPE 0xfe
+  \end{lstlisting}
+
+  \item Implement a ctor (and dtor if necessary).  Add your message type defined above to the list
+  of message types the IMV wants to receive.
+  \begin{lstlisting}
+  ExampleIMVLibrary::ExampleIMVLibrary()
+  {
+    LOG4CXX_INFO(logger, "Load ExampleIMV library ");
+    /* set all attributes inherited from tncfhh::iml::IMVLibrary */
+    // the library name for logging
+    this->imUnitLibraryName = "ExampleIMV";
+    // add an messageType composed of Vendor ID (IANA PEN) and MessageSubtype
+    this->addMessageType(VENDOR_ID, MESSAGE_SUBTYPE);
+  }
+  \end{lstlisting}
+
+  \item Initialize the imunit framework (done in ExampleIMVLibrary.cpp). This defines
+  the C-functions interface according to IF-IMV and maps those functions to C++ methods
+  of imunit. You must provide the class name of your ExampleIMVLibrary implementation
+  as argument. This causes the framework to create an instance of ExampleIMVLibrary
+  within the initialization macro.
+  \begin{lstlisting}
+  // TNC@FHH IMVLibrary Initialization +
+  // implement IF-IMV c-functions
+  TNCFHH_IMVLIBRARY_INITIALIZE(ExampleIMVLibrary) ;
+  \end{lstlisting}
+
+  \item Implement the pure virtual factory method. This method creates a new instance of
+  the ExampleIMV class (described in step 2). The method is called when a new connection
+  is created. The memory is freed when the same connection is deleted.
+  \begin{lstlisting}
+  tncfhh::iml::AbstractIMV *ExampleIMVLibrary::createNewImvInstance(TNC_ConnectionID conID)
+  {
+    LOG4CXX_TRACE(logger, "createNewImvInstance( " << conID << ")");
+    // just return a new instance of ExampleIMV
+    return new ExampleIMV(conID, this);
+  }
+  \end{lstlisting}
+ \end{enumerate}
+
+ \item Create a class ExampleIMV that extends AbstractIMV.
+ \begin{enumerate}
+  \item Define the ctor (and dtor if necessary). The ctor needs the connection ID and a pointer to the
+  corresponding ExampleIMVLibrary as arguments. Internally, this causes the instantiation of a TNCS object
+  which can forward the calls to the ``real'' TNCS via the pointer to the ExampleIMVLibrary (which holds the
+  function pointers to the ``real'' TNCS). The benefit is: you as IMV developer can call methods of the TNCS
+  instantiation to talk to the ``real'' TNCS.
+  \begin{lstlisting}
+  ExampleIMV::ExampleIMV(TNC_ConnectionID conID, ExampleIMVLibrary *pExampleIMVLibrary)
+    :AbstractIMV(conID, pExampleIMVLibrary)
+  {
+    // initialize
+  }
+  \end{lstlisting}
+
+  \item In contrast to the IMC part, there is no mandatory (pure virtual) method that must be implemented by ExampleIMV. However, we will
+  override several optional methods.
+
+  \begin{enumerate}
+   \item Implement receiveMessage(). This is called to deliver a message from the IMC which was received by the TNCS to the IMV. Here, our IMV sends a new message
+   if this is the first round of the TNC handshake. Otherwise, it provides an allow recommendation. The round counter is managed by the imunit
+   framework as follows:
+   \begin{itemize}
+    \item set to 0 at the end of IMC/VLibrary::notifyConnectionChange() when called with newState == \verb+TNC_CONNECTION_STATE_HANDSHAKE+
+    \item for IMC/V  : increased before IMC/VLibrary::batchEnding returns
+    \item for the IMC: increased before IMCLibrary::beginHandshake returns
+   \end{itemize}
+  \begin{lstlisting}
+TNC_Result ExampleIMV::receiveMessage(TNC_BufferReference message, TNC_UInt32 messageLength, TNC_MessageType messageType)
+{
+  LOG4CXX_DEBUG(logger, "receiveMessage round " << this->getRound());
+  // print received message dirty out. WARNING: don't ape this,
+  // message should end with non-null! Heed: Message can be evil!
+  LOG4CXX_INFO(logger, "Received Message: " << message);
+  /* only send one message to ExampleIMC */
+  if (this->getRound() < 1) {
+    // this message should be send to ExampleIMC
+    std::string sendMessage("Example message from ExampleIMV");
+    LOG4CXX_INFO(logger, "Send Message: " << sendMessage);
+    // send message
+    this->tncs.sendMessage((unsigned char*)sendMessage.c_str(), sendMessage.size()+1/*for'\0'*/, VENDOR_ID, MESSAGE_SUBTYPE);
+  } else {
+    /* validation finish, set recommendation & co */
+    validationFinished = true;
+    // for access allow:
+    actionRecommendation = TNC_IMV_ACTION_RECOMMENDATION_ALLOW;
+    // set evaluation (see TNC_IMV_EVALUATION_RESULT_...)
+    evaluationResult = TNC_IMV_EVALUATION_RESULT_DONT_KNOW;
+  }
+  // return all ok
+  return TNC_RESULT_SUCCESS;
+}
+  \end{lstlisting}
+
+  \item Implement batchEnding(). Here, it basically does nothing.
+  \begin{lstlisting}
+  TNC_Result ExampleIMV::batchEnding()
+  {
+    LOG4CXX_TRACE(logger, "batchEnding");
+    // return all ok
+    return TNC_RESULT_SUCCESS;
+  }
+  \end{lstlisting}
+
+  \item Implement notifyConnectionChange(). The new connection state can be queried via the getConnectionState() method.
+  Here, it basically does nothing. Normally, you would change the state of your IMV according to the connection state.
+  \begin{lstlisting}
+  TNC_Result ExampleIMV::notifyConnectionChange()
+  {
+    LOG4CXX_TRACE(logger, "notifyConnectionChange");
+    /* if new handshake start */
+    if(this->getConnectionState() == TNC_CONNECTION_STATE_HANDSHAKE)
+    /* reset IMV */;
+    // return all ok
+    return TNC_RESULT_SUCCESS;
+  }
+  \end{lstlisting}
+
+  \end{enumerate}
+
+ \end{enumerate}
+ \item Finished. Thats all for the IMV part.
+\end{enumerate}
+
+\subsection{dummy}
+\subsubsection{General Information}
+This is another helloworld example for an IMC/V that is implemented based upon imunit.
+The IMC reads a local file, sends the content to the IMV, which provides
+a recommendation based upon this message.
+
+\subsubsection{Architecture}
+The architecture of the dummyimc/v is very simple. The IMC sends the content of a local
+file to the IMV. The content is either "allow", "isolate", or "none", that correspond
+to the respective TNC recommendations. The default location of the policy is
+\texttt{/etc/tnc/dummyimc.file}. The IMV uses a policy that defines how many
+messages it wants to receive before a recommendation is granted. The default
+location of the policy is \texttt{/etc/tnc/dummyimv.policy}.
+
+\subsection{clamav}
+\subsubsection{General Information}
+The clamav IMC/V checks the status of the anti virus software ClamAV. The IMC/V pair
+supports the evaluation of the following properties:
+\begin{itemize}
+	\item Operational Status of clamd
+	\item Version of clamav
+	\item Version of main
+	\item Version of daily
+\end{itemize}
+The baseline for this evaluation is the clamavimv.policy file. This is a simple
+text file that enables you to specify the desired good values of an endpoint's
+ClamAV configuration. The file is commented extensively. The policy file is
+read at the beginning of each new handshake. Remediation is not supported in
+this version. If the data received from the clamavimc matches the desired values
+in the policy, an 'ALLOW' recommendation is provided. Otherwise, an 'ISOLATE'
+recommendation is provided.
+
+\subsubsection{Architecture}
+The IMC/V pair consists of four classes that extend those of the imunit framework (like
+the exampleimc/v from section \ref{sec:example-imcv}). In order to work properly,
+the clamavimc needs a configuration file. The default location is
+\texttt{/etc/tnc/clamavimc.conf}. The file is commented extensively. The clamavimv
+needs a policy file where the desired, reference values are specified. The default
+location of the policy is \texttt{/etc/tnc/clamavimv.policy}. The file is commented
+extensively. The measurement values on the AR are obtained by using the clamconf
+utility of Clamav. Depending on last clamav update (full or incremental) the filname 
+ending for main and daily can be *.cvd or *.cld. Former versions to 0.7.0 of clamavimc/v
+did not consider this. 
+
+\subsection{platid}
+\subsubsection{General Information}
+The idea of this IMC/V pair is to enable interoperable platform identification.
+It implements a simple challenge/response protocol. The IMC signs the challenge
+with its RSA private key. The IMV validates if the signature obtained from the
+IMC is good and if the corresponding public key has been properly registered (e.g.
+whether it is a known platform or not). The key management is based upon
+X.509 certificates. As a special feature, the IMC supports to use a TPM protected
+key. The openssl\_tpm\_engine package from the TrouSerS project is needed to accomplish
+this.
+
+The protocol is as follows: The IMV receives a complete X.509 certificate
+from the IMC. The IMV then sends back a random nonce to the IMC which is encrypted
+with the RSA private key. The IMV decrypts the encrypted nonce with the public key
+contained in the X.509 certificate and compares it with the one which was
+send. Additionally the IMV compares the issuername and fingerprint of the
+X.509 certificate with entries configured in its policy.
+
+\subsubsection{Architecture}
+The IMC is configured via a file. The default location is \texttt{/etc/tnc/platidimc.file}
+It cotains information for the IMC where to find the platform's X.509 certificate
+and the corresponding RSA private key. The default location of the IMV policy is
+\texttt{/etc/tnc/platidimv.certs}.
+
+The IMC/V pair uses open\_ssl for cryptographic operations. If a TPM based key
+should be used, the IMC additionally needs TrouSerS and the openssl\_tpm\_engine.
+Please refer to the TrouSerS documentation for information how to set up the TPM engine. 
+
+\subsection{attestation}
+\subsubsection{General Information} 
+The attestation IMC/V pair implements a simple protocol for binary attestation. The integrity
+of the AR is verified based on its TPM PCR values.
+
+The following steps give a brief overview of the imc/v handshake:
+\begin{itemize}
+	\item{Step 1: IMC sends its AIK X.509 certificate.}
+	\item{Step 2: IMV verifies AIK certificate.}
+	\item{Step 3: IMV sends PCR\_SELECTION to IMC.}
+	\item{Step 4: IMC generates TPM Quote based on PCR\_SELECTION and sends it back to IMV.}
+	\item{Step 5: IMV generates separate TPM Quote based on PCR reference values.}
+	\item{Step 6: IMV compares own TPM Quote with IMC TPM Quote and verifies IMC TPM Quote signature.}
+	\item{Step 7: According to operation mode, step 3-6 can be repeated several times.}
+	\item{Step 8: Depending on validation in step 6, IMV provides "ALLOW" or "NO\_ACTION" recommendation.}
+\end{itemize}
+
+TPM PCR values are SHA-1 hashes which represent available hard- and software on a computer system, as well as the configuration thereof. These values are usually determined during system start (trusted boot).
+TrustedGRUB extends the open-source bootloader GNU GRUB with TPM support
+to measure the binary configuration (i.e., the identity) of modules to be loaded.
+Further information can be found at \url{http://sourceforge.net/projects/trustedgrub/}.
+Therefore a working TPM is needed as well as a Trusted Software Stack (TSS) for TPM access, e.g. TrouSerS.
+
+Attestation Identity Keys (AIKs) are used to ensure that PCR values (a TPM Quote) come from a trustworthy TPM.
+Due to the fact that current version of attestationIMC/V is not capable of verifying a CA certificate path, a fingerprint of all used AIK credentials must be made known to the IMV.
+
+\subsubsection{Architecture}
+
+IMV policy is located at \code{/etc/tnc/attestationimv.policy} and contains
+a list of PCRs with their associated, desired reference values.
+Two modes of operation are available. \code{quoteType=single} requests PCRs sequentially one after another.
+\code{quoteType=complete} asks the IMC to quote all given PCRs at once.
+Single quote mode allows you to determine which PCR value does not match the policy but also causes 
+one batch per PCR value, resulting in a higher amount of network traffic.
+The TPM Quote is basically a SHA-1 hash of the TCPA\_QUOTE\_INFO structure.
+TPM quoting request is performed by the corresponding calls to the TSS,
+e.g. TrouSerS since version 0.3.4 is needed.
+This version of attestationIMV does not support different policies (PCR values) per AR.
+To prevent replay attacks a random 20 byte nonce is also part of each PCR\_SELECTION.
+
+IMC configuration is located at \code{/etc/tnc/platidIMC.file} and contains a path to the 
+X509 certificate and its corresponding private-key (AIK).
+Currently, tools from \url{http://www.privacyca.com} are used
+to create AIKs. The code from \code{identity.c} creates a AIK
+blob and a corresponding X.509 certificate.
+The SHA-1 hash from this certificate can be extracted by using
+ \code{x509} tool from OpenSSL.
+
+\subsection{hostscanner}
+\subsubsection{General Information}
+The hostscannerimc/v scans for opened ports on an endpoint. The ports to be scanned and 
+the expected status of these ports are defined in the IMVs policy file.
+
+\subsubsection{Architecture}
+In the IMV's policy, a list of ports with their desired status can be specified.
+The default location of the policy is \texttt{/etc/tnc/hostscannerimv.policy}.
+The IMC does not require a configuration file.
+
+
+\section{tncsim}
+\subsection{General Information}
+tncsim is a simple program that allows you to test IMC/V pairs locally on one
+endpoint. tncsim loads IMCs and IMVs and initiates a single TNC handshake. Lots
+of debug information is printed out, including the binary structure of the TNC
+packets sent from TNCC to TNCS and vice versa.
+
+\subsection{Architecture}
+In its default configuration, tncsim uses libtnc as client and TNC@FHH tncs
+as server. IMC/V pairs that shall be loaded are specified in \texttt{/etc/tnc/tncsim\_config}.
+tncsim can be extended to support arbitrary TNCC and TNCS implementations. For
+details, please refer to the sourcecode.
+
+% ==============================================================================
+\section{Copyright and License}
+This software is Copyright (C) 2010
+Fachhochschule Hannover (University of Applied Sciences and Arts).
+Use is subject to license conditions.
+The main licensing options available are Open Source or Commercial:
+
+\paragraph{Open Source Licensing} This is the appropriate option if you want to
+share the source code of your application with everyone you
+distribute it to, and you also want to give them the right to share
+who uses it. If you wish to use TNC@FHH under Open Source Licensing,
+you must contribute all your source code to the open source
+community in accordance with the GPL Version 2 when your application
+is distributed. See http://www.gnu.org/copyleft/gpl.html
+
+\paragraph{Commercial Licensing} This is the appropriate option if you are
+creating proprietary applications and you are not prepared to
+distribute and share the source code of your application.
+Contact trust@f4-i.fh-hannover.de for details.
+
+% ==============================================================================
+\section{Acknowledgement}
+TNC@FHH is implemented by the Trust@FHH research group of the Fachhochschule Hannover, the University of Applied Sciences and Arts, located in Lower Saxony, Germany. Parts of this work have been carried out within the tNAC research project (support code 1704B08) which is funded by the German Federal Ministry of Education and Research (\url{http://www.bmbf.de/en/index.php}).
+
+
+\end{document}

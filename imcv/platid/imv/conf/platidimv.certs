@@ -1,0 +1,20 @@
+# Known Certs File for PlatidIMV
+# "Issuer" SHA1 HASH
+# obtained via
+# openssl x509 -noout -issuer -fingerprint < <cert-file>
+
+# test certificate shipped with platidimc/v
+"/C=AU/ST=Some-State/O=Some-Organization/CN=Some-Name/emailAddress=Some-Address" 45:CF:10:EC:C3:66:C5:81:AA:91:34:8C:31:1F:F3:79:9C:EF:C2:CB
+
+# the next line is from mykezsw.cert
+"/C=DE/ST=Lower Saxony/L=Hannover/O=FH Hannover/OU=Fakultaet IV/CN=trust/emailAddress=trust@f4-i.fh-hannover.de" 84:C3:53:7B:6E:86:A6:06:57:C9:7B:4F:17:DF:A7:46:49:1C:51:52
+
+# this is a fingerprint from a cert from a key which was generated with the tpm_emulator!!!
+"/C=AU/ST=Some-State/O=Internet Widgits Pty Ltd" DC:30:E6:EA:F1:97:5D:90:E6:AE:D0:A3:C8:62:5C:61:93:9B:96:4B
+
+# the next line is valid but makes no sense
+"abdefghijklmnopqrstuvwxyz" YY:YY:YY:YY:YY:YY:YY:YY:YY:YY:YY:YY:YY:YY:YY:YY:YY:YY:YY:YY
+
+# this is not valid, it's missing a <">
+"/C=AU/ST=Some-State/O=Internet Widgits Pty Ltd DC:30:E6:EA:F1:97:5D:90:E6:AE:D0:A3:C8:62:5C:61:93:9B:96:4B
+
