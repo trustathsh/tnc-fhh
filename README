@@ -121,24 +121,22 @@ the official TCG website or to the Trust@FHH research group's website [5].
 5. FEEDBACK
 
 We really appreciate any feedback about TNC@FHH. If you find bugs, feel free to
-report them via email to trust@f4-i.fh-hannover.de or issue a bug report in our
-bugtracking system [6]
+report them via email to trust@f4-i.fh-hannover.de
 
 6. ACKNOWLEDGEMENT
 
 TNC@FHH is implemented by the Trust@FHH research group of the Fachhochschule
 Hannvover, the University of Applied Sciences and Arts, located in Lower Saxony,
-Germany [7]. Parts of this work have been carried out within the tNAC research
+Germany [6]. Parts of this work have been carried out within the tNAC research
 project (support code 1704B08) which is funded by the german BMBF (Federal
-Ministry of Education and Research) [8].
+Ministry of Education and Research) [7].
 
 7. REFERENCES
 
 [1] http://www.trustedcomputinggroup.org/developers/trusted_network_connect
 [2] http://www.trustedcomputinggroup.org
 [3] http://freeradius.org/
-[4] http://trust.inform.fh-hannover.de/wiki/index.php/Main_Page  
-[5] http://trust.inform.fh-hannover.de/
-[6] https://trust.inform.fh-hannover.de/mantis/
-[7] http://www.fh-hannover.de/ 
-[8] http://www.bmbf.de/en/index.php
+[4] https://trust.inform.fh-hannover.de/trust_redmine/projects/tncfhh/wiki  
+[5] https://trust.inform.fh-hannover.de/
+[6] http://www.fh-hannover.de/ 
+[7] http://www.bmbf.de/en/index.php
