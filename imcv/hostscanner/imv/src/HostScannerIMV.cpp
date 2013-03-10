@@ -315,7 +315,7 @@ std::vector<std::pair<std::string,std::string> > HostScannerIMV::readAllProperti
 		if (line.size()<1 || line.at(0)=='#')
 			continue;
 
-        u_int pos = line.find_first_of('=');
+        unsigned int pos = line.find_first_of('=');
 
         /* ignore illegal lines */
         if (pos == std::string::npos) {
