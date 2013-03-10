@@ -41,7 +41,7 @@ set(src ${src} src/AttestationIMV.cpp)
 set(src ${src} src/AttestationIMVPolicyManager.cpp)
 
 # define shared object
-add_library(${PROJECT_NAME}${TYPE} MODULE ${src})
+add_library(${PROJECT_NAME}${TYPE} SHARED ${src})
 
 # add libraries
 target_link_libraries(${PROJECT_NAME}${TYPE} imunit  ${OPENSSL_LIBRARIES})

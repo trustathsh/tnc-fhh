@@ -206,7 +206,7 @@ int PlatidIMV::generateAndSendNonce()
 
 	if (randNonce == NULL) {
 		LOG4CXX_FATAL(logger, "Could not allocate memory for randNonce");
-		nothingWrong == false;
+		nothingWrong = false;
 		return -1;
 	}
 
