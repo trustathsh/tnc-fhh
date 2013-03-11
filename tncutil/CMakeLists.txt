@@ -31,11 +31,13 @@ if( CMAKE_COMPILER_IS_GNUCXX )
     set( CMAKE_CXX_FLAGS  "${CMAKE_C_FLAGS} -fPIC")
 endif( CMAKE_COMPILER_IS_GNUCXX )
 
+# verify openssl is available
+find_package(OpenSSL REQUIRED)
+
 #define library
 add_library(${PROJECT_NAME} SHARED ${src})
 
-# add libraries needed by tncutil
-target_link_libraries(${PROJECT_NAME} ${Log4cxx_LIBRARY} ${XercesC_LIBRARY})
+target_link_libraries(${PROJECT_NAME} ${Log4cxx_LIBRARY} ${XercesC_LIBRARY} ${Boost_LIBRARIES} ${OPENSSL_LIBRARIES})
 
 # set version
 SET_TARGET_PROPERTIES(${PROJECT_NAME} PROPERTIES VERSION ${TNCFHH_VERSION_MAJOR}.${TNCFHH_VERSION_MINOR}.${TNCFHH_VERSION_PATCH}  SOVERSION 0)

@@ -19,7 +19,7 @@ set(src ${src} src/ExampleIMVLibrary.cpp)
 set(src ${src} src/ExampleIMV.cpp)
 
 # define shared object
-add_library(${PROJECT_NAME}${TYPE} MODULE ${src})
+add_library(${PROJECT_NAME}${TYPE} SHARED ${src})
 
 # add libraries
 target_link_libraries(${PROJECT_NAME}${TYPE} imunit)

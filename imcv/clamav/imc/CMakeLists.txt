@@ -37,7 +37,7 @@ set(src ${src} src/ClamavIMCLibrary.cpp)
 set(src ${src} src/ClamavIMC.cpp)
 
 # define shared object
-add_library(${PROJECT_NAME}${TYPE} MODULE ${src})
+add_library(${PROJECT_NAME}${TYPE} SHARED ${src})
 
 # add libraries
 target_link_libraries(${PROJECT_NAME}${TYPE} imunit)
